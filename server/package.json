@@ -11,18 +11,26 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@langchain/core": "^1.2.8",
+    "@langchain/mistralai": "^1.2.0",
+    "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "@supabase/supabase-js": "^2.112.3",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^6.1.2",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
+    "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
+    "langchain": "^1.5.9",
     "nodemailer": "^9.0.5",
     "nodemon": "^3.1.14",
     "passport": "^0.7.0",
-    "passport-google-oauth20": "^2.0.0"
+    "passport-google-oauth20": "^2.0.0",
+    "pg": "^8.23.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

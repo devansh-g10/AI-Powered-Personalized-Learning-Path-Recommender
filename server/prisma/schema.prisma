@@ -10,6 +10,7 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Existing model ───────────────────────────────────────────────────────────
 // Profile stores extra user info — userId maps to Supabase auth.users.id (UUID)
 model Profile {
   id        String   @id @default(cuid())
@@ -21,4 +22,143 @@ model Profile {
   updatedAt DateTime @updatedAt
 
   @@map("profiles")
+}
+
+// ─── AI System Models ─────────────────────────────────────────────────────────
+
+// Conversations — each chat session a user creates
+model Conversation {
+  id        String             @id @default(cuid())
+  userId    String             // Supabase auth.users UUID — enforced at API layer
+  title     String             @default("New Learning Path")
+  status    ConversationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  messages        ConversationMessage[]
+  learningContext LearningContext?
+  roadmap         Roadmap?
+
+  @@index([userId])
+  @@index([userId, status])
+  @@map("conversations")
+}
+
+enum ConversationStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// ConversationMessage — every human/AI message, immutable record
+model ConversationMessage {
+  id             String      @id @default(cuid())
+  conversationId String
+  role           MessageRole // HUMAN | AI
+  content        String      @db.Text
+  metadata       Json?       // e.g. topicId reference, roadmap snapshot ref
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([conversationId, createdAt])
+  @@map("conversation_messages")
+}
+
+enum MessageRole {
+  HUMAN
+  AI
+}
+
+// LearningContext — questionnaire answers tied to a conversation
+model LearningContext {
+  id             String   @id @default(cuid())
+  conversationId String   @unique
+  userId         String
+
+  // Core questionnaire fields
+  learningGoal        String  @db.Text                // What do you want to learn?
+  motivation          String? @db.Text                // Why do you want to learn it?
+  currentLevel        String                          // beginner / intermediate / advanced
+  existingSkills      String[] @default([])           // known technologies/concepts
+  currentlyLearning   String? @db.Text               // What are you currently learning?
+  nextToLearn         String? @db.Text               // What do you want to learn next?
+  depthPreference     String  @default("balanced")   // surface / balanced / deep
+  weeklyHours         Int?                            // Hours per week available
+  targetOutcome       String? @db.Text               // Goal / final outcome
+  preferences         String? @db.Text               // Constraints, preferences
+  additionalContext   Json?                           // Any extra structured metadata
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("conversation_learning_context")
+}
+
+// Roadmap — the top-level AI-generated learning plan for a conversation
+model Roadmap {
+  id             String @id @default(cuid())
+  conversationId String @unique
+  userId         String
+
+  objective            String  @db.Text
+  currentAssessment    String? @db.Text
+  finalOutcome         String? @db.Text
+  totalEstimatedWeeks  Int?
+  version              Int     @default(1)
+  rawJson              Json    // Full roadmap JSON blob for quick frontend access
+  changeHistory        Json?   // Array of version snapshots
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conversation Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  phases       RoadmapPhase[]
+
+  @@index([userId])
+  @@map("roadmaps")
+}
+
+// RoadmapPhase — a learning phase within a roadmap (e.g. "Foundations", "Advanced")
+model RoadmapPhase {
+  id       String @id @default(cuid())
+  roadmapId String
+  phaseId  String // Stable identifier from AI (e.g. "phase-1")
+  title    String
+  description String? @db.Text
+  order    Int
+  estimatedWeeks Int?
+
+  roadmap Roadmap        @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  topics  RoadmapTopic[]
+
+  @@index([roadmapId])
+  @@map("roadmap_phases")
+}
+
+// RoadmapTopic — individual topics the user must learn
+model RoadmapTopic {
+  id      String @id @default(cuid())
+  phaseId String
+  topicId String // Stable AI-assigned ID (e.g. "topic-001") — used for cross-questions
+
+  title         String
+  description   String? @db.Text
+  whyThisExists String? @db.Text  // AI's explanation for why this topic is included
+  difficulty    String  @default("beginner") // beginner / intermediate / advanced
+  estimatedHours Int?
+  prerequisites  String[] @default([])  // Array of topicId strings
+  subtopics     String[] @default([])
+  projects      String[] @default([])
+  isMilestone   Boolean @default(false)
+  order         Int
+
+  phase RoadmapPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+  @@index([phaseId])
+  @@index([topicId]) // Fast lookup by stable AI-assigned topicId
+  @@map("roadmap_topics")
 }
