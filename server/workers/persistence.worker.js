@@ -105,13 +105,16 @@ export function startPersistenceWorker() {
     console.error(`[Worker] Job ${job?.id} failed (attempt ${job?.attemptsMade}):`, err.message);
   });
 
+  let hasLoggedRedisWarning = false;
   workerInstance.on("error", (err) => {
-    // Suppress empty/connection errors to avoid noisy logs when Redis is starting up
     const msg = err?.message || "";
-    if (msg) console.error("[Worker] Worker error:", msg);
-    else console.warn("[Worker] Redis connection unavailable — worker will retry when Redis is ready.");
+    if (msg && !msg.includes("ECONNREFUSED")) {
+      console.error("[Worker] Worker error:", msg);
+    } else if (!hasLoggedRedisWarning) {
+      hasLoggedRedisWarning = true;
+      console.warn("ℹ️  [Worker] Redis unavailable in local dev — running in PostgreSQL direct fallback mode.");
+    }
   });
-
 
   console.log("✅ Persistence worker started.");
   return workerInstance;

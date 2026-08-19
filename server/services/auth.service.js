@@ -13,24 +13,34 @@ export const registerUser = async ({ fullName, email, password }) => {
     },
   });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    // Sanitize common Supabase error messages
+    if (error.message.includes("User already registered")) {
+      throw new Error("An account with this email already exists. Please log in.");
+    }
+    throw new Error(error.message);
+  }
 
-  const userId = data.user.id;
+  const userId = data.user?.id;
+  if (!userId) {
+    throw new Error("Registration failed: could not create user account.");
+  }
 
-  // Create profile row in our Prisma profiles table
+  // Create or update profile row in our Prisma profiles table
   const profile = await prisma.profile.upsert({
     where: { userId },
     create: { userId, fullName },
-    update: {},
+    update: { fullName },
   });
 
   return {
-    session: data.session, // contains access_token, refresh_token
+    session: data.session || null, // null if email confirmation is required by Supabase
+    requiresEmailConfirmation: !data.session,
     user: {
       id: userId,
       email: data.user.email,
-      fullName: profile.fullName,
-      avatarUrl: profile.avatarUrl,
+      fullName: profile.fullName || fullName,
+      avatarUrl: profile.avatarUrl || null,
       emailConfirmed: !!data.user.confirmed_at,
     },
   };
@@ -41,20 +51,36 @@ export const registerUser = async ({ fullName, email, password }) => {
 export const loginUser = async ({ email, password }) => {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.message.includes("Invalid login credentials")) {
+      throw new Error("Invalid email or password. Please check your credentials.");
+    }
+    if (error.message.includes("Email not confirmed")) {
+      throw new Error("Please verify your email address before signing in.");
+    }
+    throw new Error(error.message);
+  }
 
   const userId = data.user.id;
+  const fullNameFromMeta =
+    data.user.user_metadata?.full_name ||
+    data.user.user_metadata?.name ||
+    email.split("@")[0];
 
-  // Fetch profile from Prisma
-  const profile = await prisma.profile.findUnique({ where: { userId } });
+  // Fetch or upsert profile in Prisma
+  const profile = await prisma.profile.upsert({
+    where: { userId },
+    create: { userId, fullName: fullNameFromMeta },
+    update: {},
+  });
 
   return {
     session: data.session, // contains access_token, refresh_token
     user: {
       id: userId,
       email: data.user.email,
-      fullName: profile?.fullName,
-      avatarUrl: profile?.avatarUrl,
+      fullName: profile.fullName || fullNameFromMeta,
+      avatarUrl: profile.avatarUrl || null,
     },
   };
 };
