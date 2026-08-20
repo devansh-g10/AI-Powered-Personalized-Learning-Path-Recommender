@@ -43,7 +43,8 @@ const popularGoalPresets = [
 
 export default function QuestionnairePage() {
   const { id: routeConvId } = useParams<{ id: string }>();
-  const conversationId = routeConvId || `conv-${Date.now()}`;
+  const [generatedConvId] = useState(() => `conv-${Date.now()}`);
+  const conversationId = routeConvId || generatedConvId;
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
