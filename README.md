@@ -342,29 +342,6 @@ cd server
 npm install
 ```
 
-Create a `.env` file in the `server/` directory:
-```env
-PORT=4000
-CLIENT_URL="http://localhost:5173"
-GOOGLE_REDIRECT_URL="http://localhost:5173/auth/callback"
-
-# Supabase Auth & PostgreSQL
-SUPABASE_URL="https://your-project.supabase.co"
-SUPABASE_ANON_KEY="your-anon-key"
-SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
-
-# Database URLs (PgBouncer Pooler + Direct Migration Connection)
-DATABASE_URL="postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true"
-DIRECT_URL="postgresql://postgres:[password]@db.[ref].supabase.co:5432/postgres"
-
-# Mistral AI
-MISTRAL_API_KEY="your-mistral-api-key"
-MISTRAL_MODEL="mistral-small-latest"
-
-# Redis Cache & Queue
-REDIS_URL="redis://localhost:6379"
-```
-
 Run database migrations & start backend server:
 ```bash
 # Generate Prisma Client & apply migrations
