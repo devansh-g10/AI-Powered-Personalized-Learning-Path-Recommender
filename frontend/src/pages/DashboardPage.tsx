@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -27,6 +27,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { conversationsApi } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useEffect, useState, type MouseEvent } from "react";
 
 export interface ConversationItem {
   id: string;
@@ -110,8 +111,15 @@ export default function DashboardPage() {
       setIsLoading(true);
       const { data } = await conversationsApi.list();
       if (data.conversations && data.conversations.length > 0) {
-        const mapped: ConversationItem[] = data.conversations.map((c: any) => ({
-          id: c.id,
+        const mapped: ConversationItem[] = data.conversations.map((c: {
+id: string;
+  title?: string;
+  status?: string;
+  createdAt?: string;
+  roadmap?: ConversationItem["roadmap"];
+  learningContext?: ConversationItem["learningContext"];
+}) => ({
+  id: c.id,
           title: c.title || "Custom Learning Path",
           status: c.status || "ACTIVE",
           createdAt: c.createdAt || new Date().toISOString(),
@@ -169,7 +177,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
+ const handleDelete = (e: MouseEvent, id: string) => {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to remove this learning path?")) return;
     try {
