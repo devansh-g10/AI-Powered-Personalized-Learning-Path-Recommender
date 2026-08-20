@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
+import { ThemeToggle } from "./ThemeToggle";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard" },
@@ -91,7 +92,7 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="relative bg-white text-zinc-950 w-full min-h-screen overflow-x-hidden flex flex-col">
+    <div className="relative bg-white dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 w-full min-h-screen overflow-x-hidden flex flex-col">
       {/* Background ambient gradient glows across full width */}
       <img
         src="https://images.unsplash.com/photo-1557683316-973673baf926?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3ODc2NDd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGJsdWUlMjB2aW9sZXQlMjBncmFkaWVudCUyMHNvZnQlMjBnbG93fGVufDF8MHx8fDE3ODcwMzk1NTB8MA&ixlib=rb-4.1.0&q=80&w=400"
@@ -101,7 +102,7 @@ export default function AppLayout() {
       <div className="pointer-events-none blur-3xl bg-[radial-gradient(circle,oklch(0.623_0.214_259.815)_0%,transparent_70%)] opacity-15 rounded-full absolute -left-32 bottom-0 w-[700px] h-[700px]" />
 
       {/* ─── Full-Width Header Bar ───────────────────────────────────────── */}
-      <header className="w-full border-b border-zinc-200/70 backdrop-blur-xl bg-white/80 sticky top-0 z-40 transition-all">
+      <header className="w-full border-b border-zinc-200/70 dark:border-zinc-800/70 backdrop-blur-xl bg-white/80 sticky top-0 z-40 transition-all">
         <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-6 lg:gap-10">
             {/* Logo -> Navigates to Landing Page on Click */}
@@ -113,7 +114,7 @@ export default function AppLayout() {
               <div className="size-9 shadow-lg shadow-[#2b7fff]/30 rounded-xl bg-[#2b7fff] text-blue-50 flex justify-center items-center group-hover:scale-105 transition-transform">
                 <Route className="size-5" />
               </div>
-              <span className="font-bold text-xl tracking-tight text-zinc-900 group-hover:text-[#2b7fff] transition-colors">
+              <span className="font-bold text-xl tracking-tight text-zinc-900 dark:text-zinc-50 group-hover:text-[#2b7fff] transition-colors">
                 PathAI
               </span>
             </button>
@@ -127,7 +128,7 @@ export default function AppLayout() {
                   className={`font-medium rounded-xl text-sm leading-5 px-4 py-2 transition-all border-0 cursor-pointer ${
                     isActive(item.path)
                       ? "font-semibold bg-[#2b7fff]/10 text-[#2b7fff]"
-                      : "text-[#71717b] hover:text-zinc-950 hover:bg-zinc-100/70 bg-transparent"
+                      : "text-[#71717b] hover:text-zinc-950 dark:hover:text-zinc-50 hover:bg-zinc-100/70 bg-transparent"
                   }`}
                 >
                   {item.label}
@@ -137,13 +138,14 @@ export default function AppLayout() {
           </div>
 
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             {/* Notification Bell */}
             <div className="relative">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="size-9 rounded-full border-zinc-200/80 cursor-pointer relative hover:bg-zinc-100/70"
+                className="size-9 rounded-full border-zinc-200/80 dark:border-zinc-800/80 cursor-pointer relative hover:bg-zinc-100/70"
               >
                 <Bell className="size-4" />
                 {unreadCount > 0 && (
@@ -153,10 +155,10 @@ export default function AppLayout() {
 
               {/* Notification Popover */}
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-zinc-200 p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between pb-3 border-b border-zinc-100 mb-3">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-zinc-950 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-900 mb-3">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-sm text-zinc-900">Notifications</span>
+                      <span className="font-bold text-sm text-zinc-900 dark:text-zinc-50">Notifications</span>
                       {unreadCount > 0 && (
                         <Badge className="bg-[#2b7fff]/10 text-[#2b7fff] text-[10px] px-1.5 py-0">
                           {unreadCount} new
@@ -180,14 +182,14 @@ export default function AppLayout() {
                         className={`p-3 rounded-xl border transition-colors ${
                           n.unread
                             ? "bg-[#2b7fff]/5 border-[#2b7fff]/20"
-                            : "bg-zinc-50/50 border-zinc-100"
+                            : "bg-zinc-50/50 border-zinc-100 dark:border-zinc-900"
                         }`}
                       >
-                        <div className="flex items-center justify-between text-xs font-bold text-zinc-900 mb-1">
+                        <div className="flex items-center justify-between text-xs font-bold text-zinc-900 dark:text-zinc-50 mb-1">
                           <span>{n.title}</span>
                           <span className="text-[10px] text-[#71717b] font-normal">{n.time}</span>
                         </div>
-                        <p className="text-xs text-zinc-600 leading-relaxed">{n.desc}</p>
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">{n.desc}</p>
                       </div>
                     ))}
                   </div>
@@ -232,7 +234,7 @@ export default function AppLayout() {
                   variant="outline"
                   size="sm"
                   onClick={() => navigate("/login")}
-                  className="rounded-xl h-9 gap-1.5 font-medium border-zinc-200 cursor-pointer text-xs"
+                  className="rounded-xl h-9 gap-1.5 font-medium border-zinc-200 dark:border-zinc-800 cursor-pointer text-xs"
                 >
                   <LogIn className="size-3.5" />
                   Sign In
@@ -244,7 +246,7 @@ export default function AppLayout() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden size-9 rounded-xl border border-zinc-200"
+              className="md:hidden size-9 rounded-xl border border-zinc-200 dark:border-zinc-800"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
@@ -255,7 +257,7 @@ export default function AppLayout() {
 
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-xl border-b border-zinc-200 px-6 py-4 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-150 z-30">
+        <div className="md:hidden bg-white/95 backdrop-blur-xl border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-150 z-30">
           <button
             onClick={() => {
               navigate("/");
@@ -275,7 +277,7 @@ export default function AppLayout() {
               className={`text-left font-medium rounded-xl text-sm px-4 py-3 transition-colors border-0 cursor-pointer ${
                 isActive(item.path)
                   ? "font-semibold bg-[#2b7fff]/10 text-[#2b7fff]"
-                  : "text-zinc-700 hover:bg-zinc-100"
+                  : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               }`}
             >
               {item.label}
@@ -292,7 +294,7 @@ export default function AppLayout() {
       {/* ─── Profile Settings Modal ────────────────────────────────────────── */}
       {profileModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-zinc-200 max-w-md w-full p-6 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white dark:bg-zinc-950 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 max-w-md w-full p-6 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <Avatar className="size-12 ring-2 ring-[#2b7fff]/30">
@@ -308,7 +310,7 @@ export default function AppLayout() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-bold text-base text-zinc-900">
+                  <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-50">
                     {user?.fullName || "Learner Profile"}
                   </h3>
                   <p className="text-xs text-[#71717b]">{user?.email || "learner@pathai.dev"}</p>
@@ -316,7 +318,7 @@ export default function AppLayout() {
               </div>
               <button
                 onClick={() => setProfileModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg bg-transparent border-0 cursor-pointer"
+                className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 p-1 rounded-lg bg-transparent border-0 cursor-pointer"
               >
                 <X className="size-5" />
               </button>
@@ -324,30 +326,30 @@ export default function AppLayout() {
 
             <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                   Full Name
                 </label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="h-10 px-3 rounded-xl border border-zinc-200 bg-white text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
+                  className="h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                   Bio / Learning Goal Headline
                 </label>
                 <textarea
                   value={editBio}
                   onChange={(e) => setEditBio(e.target.value)}
                   rows={2}
-                  className="p-3 rounded-xl border border-zinc-200 bg-white text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] resize-none"
+                  className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] resize-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100">
+              <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-900">
                 <Button
                   type="button"
                   variant="outline"

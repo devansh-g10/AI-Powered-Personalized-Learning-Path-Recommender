@@ -228,7 +228,7 @@ export default function DashboardPage() {
 
       {/* Stats Summary Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-5 backdrop-blur-xl bg-white/60 border border-zinc-200/60 shadow-sm flex items-center gap-4">
+        <Card className="p-5 backdrop-blur-xl bg-white/60 border border-zinc-200/60 dark:border-zinc-800/60 shadow-sm flex items-center gap-4">
           <div className="size-12 rounded-xl bg-[#2b7fff]/10 text-[#2b7fff] flex items-center justify-center">
             <Route className="size-6" />
           </div>
@@ -238,7 +238,7 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        <Card className="p-5 backdrop-blur-xl bg-white/60 border border-zinc-200/60 shadow-sm flex items-center gap-4">
+        <Card className="p-5 backdrop-blur-xl bg-white/60 border border-zinc-200/60 dark:border-zinc-800/60 shadow-sm flex items-center gap-4">
           <div className="size-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
             <BookOpen className="size-6" />
           </div>
@@ -248,7 +248,7 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        <Card className="p-5 backdrop-blur-xl bg-white/60 border border-zinc-200/60 shadow-sm flex items-center gap-4">
+        <Card className="p-5 backdrop-blur-xl bg-white/60 border border-zinc-200/60 dark:border-zinc-800/60 shadow-sm flex items-center gap-4">
           <div className="size-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
             <Clock className="size-6" />
           </div>
@@ -258,7 +258,7 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        <Card className="p-5 backdrop-blur-xl bg-white/60 border border-zinc-200/60 shadow-sm flex items-center gap-4">
+        <Card className="p-5 backdrop-blur-xl bg-white/60 border border-zinc-200/60 dark:border-zinc-800/60 shadow-sm flex items-center gap-4">
           <div className="size-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
             <Compass className="size-6" />
           </div>
@@ -271,15 +271,15 @@ export default function DashboardPage() {
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-1.5 p-1 bg-zinc-100/80 rounded-xl w-full sm:w-auto">
+        <div className="flex items-center gap-1.5 p-1 bg-zinc-100/80 dark:bg-zinc-800/80 rounded-xl w-full sm:w-auto">
           {["ALL", "ACTIVE", "COMPLETED"].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
               className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all border-0 cursor-pointer ${
                 statusFilter === st
-                  ? "bg-white text-[#2b7fff] shadow-sm"
-                  : "text-[#71717b] hover:text-zinc-900 bg-transparent"
+                  ? "bg-white dark:bg-zinc-950 text-[#2b7fff] shadow-sm"
+                  : "text-[#71717b] hover:text-zinc-900 dark:hover:text-zinc-50 bg-transparent"
               }`}
             >
               {st === "ALL" ? "All Paths" : st === "ACTIVE" ? "Active" : "Completed"}
@@ -288,13 +288,13 @@ export default function DashboardPage() {
         </div>
 
         <div className="relative w-full sm:w-72">
-          <Search className="size-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="size-4 text-zinc-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search learning paths..."
-            className="w-full h-9 pl-9 pr-3 rounded-xl border border-zinc-200 bg-white text-xs outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
+            className="w-full h-9 pl-9 pr-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
           />
         </div>
       </div>
@@ -307,7 +307,7 @@ export default function DashboardPage() {
             <p className="text-sm text-[#71717b]">Loading your roadmaps...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <Card className="p-12 text-center flex flex-col items-center justify-center gap-4 bg-white/40 border-dashed border-2 border-zinc-200">
+          <Card className="p-12 text-center flex flex-col items-center justify-center gap-4 bg-white/40 border-dashed border-2 border-zinc-200 dark:border-zinc-800">
             <div className="size-16 rounded-2xl bg-[#2b7fff]/10 text-[#2b7fff] flex items-center justify-center">
               <Layers className="size-8" />
             </div>
@@ -331,20 +331,20 @@ export default function DashboardPage() {
               <Card
                 key={conv.id}
                 onClick={() => navigate(`/conversations/${conv.id}/roadmap`)}
-                className="group relative cursor-pointer backdrop-blur-xl bg-white/70 hover:bg-white hover:shadow-xl hover:shadow-[#2b7fff]/5 hover:border-[#2b7fff]/30 transition-all duration-300 flex flex-col justify-between"
+                className="group relative cursor-pointer backdrop-blur-xl bg-white/70 hover:bg-white dark:hover:bg-zinc-950 hover:shadow-xl hover:shadow-[#2b7fff]/5 hover:border-[#2b7fff]/30 transition-all duration-300 flex flex-col justify-between"
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <Badge
                       variant="outline"
-                      className="bg-zinc-50 text-[10px] uppercase font-semibold text-zinc-600"
+                      className="bg-zinc-50 dark:bg-zinc-900 text-[10px] uppercase font-semibold text-zinc-600 dark:text-zinc-400"
                     >
                       {conv.category || "General"}
                     </Badge>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-8 text-zinc-400 hover:text-red-500 rounded-lg -mr-2 -mt-2"
+                      className="size-8 text-zinc-400 dark:text-zinc-500 hover:text-red-500 rounded-lg -mr-2 -mt-2"
                       onClick={(e) => handleDelete(e, conv.id)}
                     >
                       <Trash2 className="size-4" />
@@ -369,7 +369,7 @@ export default function DashboardPage() {
                     <Progress value={conv.progress} className="h-1.5" />
 
                     <div className="flex items-center justify-between text-xs text-[#71717b] mt-2">
-                      <span className="capitalize px-2 py-0.5 rounded bg-zinc-100 font-medium text-zinc-700 text-[11px]">
+                      <span className="capitalize px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-medium text-zinc-700 dark:text-zinc-300 text-[11px]">
                         {conv.learningContext?.currentLevel || "Intermediate"}
                       </span>
                       <span className="flex items-center gap-1 text-[11px]">
@@ -383,7 +383,7 @@ export default function DashboardPage() {
                   </div>
                 </CardContent>
 
-                <CardFooter className="pt-3 border-t border-zinc-100 flex items-center justify-between text-xs font-semibold text-[#2b7fff]">
+                <CardFooter className="pt-3 border-t border-zinc-100 dark:border-zinc-900 flex items-center justify-between text-xs font-semibold text-[#2b7fff]">
                   <span>Open Roadmap</span>
                   <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
                 </CardFooter>

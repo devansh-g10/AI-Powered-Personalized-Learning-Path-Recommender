@@ -69,7 +69,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white relative overflow-hidden py-12">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950 relative overflow-hidden py-12">
       {/* Background glows */}
       <img
         src="https://images.unsplash.com/photo-1557683316-973673baf926?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3ODc2NDd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGJsdWUlMjB2aW9sZXQlMjBncmFkaWVudCUyMHNvZnQlMjBnbG93fGVufDF8MHx8fDE3ODcwMzk1NTB8MA&ixlib=rb-4.1.0&q=80&w=400"
@@ -88,7 +88,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Card */}
-        <div className="backdrop-blur-xl bg-white/70 border border-zinc-200/60 rounded-2xl shadow-xl shadow-[#2b7fff]/5 p-8">
+        <div className="backdrop-blur-xl bg-white/70 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl shadow-xl shadow-[#2b7fff]/5 p-8">
           <div className="text-center mb-6">
             <h1 className="font-bold text-2xl tracking-tight mb-1">
               Create your account
@@ -103,10 +103,10 @@ export default function RegisterPage() {
               <div className="size-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="size-7" />
               </div>
-              <h2 className="font-bold text-2xl tracking-tight mb-2 text-zinc-900">
+              <h2 className="font-bold text-2xl tracking-tight mb-2 text-zinc-900 dark:text-zinc-50">
                 Verification Email Sent!
               </h2>
-              <p className="text-sm text-zinc-600 mb-6 leading-relaxed">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 leading-relaxed">
                 We've sent a confirmation link to <strong>{email}</strong>.<br />
                 Please check your inbox and verify your email to log in.
               </p>
@@ -132,9 +132,9 @@ export default function RegisterPage() {
               </Button>
 
               <div className="flex items-center gap-3 my-4">
-                <div className="flex-1 h-px bg-zinc-200" />
+                <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
                 <span className="text-[11px] text-[#71717b] uppercase font-semibold">or create with email</span>
-                <div className="flex-1 h-px bg-zinc-200" />
+                <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
               </div>
 
               {error && (
@@ -145,7 +145,7 @@ export default function RegisterPage() {
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="fullName" className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                  <label htmlFor="fullName" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                     Full Name
                   </label>
                   <input
@@ -155,12 +155,12 @@ export default function RegisterPage() {
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Devansh Maheshwari"
                     required
-                    className="h-10 px-3 rounded-lg border border-zinc-200 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
+                    className="h-10 px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="reg-email" className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                  <label htmlFor="reg-email" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                     Email
                   </label>
                   <input
@@ -170,12 +170,12 @@ export default function RegisterPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
-                    className="h-10 px-3 rounded-lg border border-zinc-200 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
+                    className="h-10 px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="reg-password" className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                  <label htmlFor="reg-password" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                     Password (8+ characters)
                   </label>
                   <div className="relative">
@@ -187,12 +187,12 @@ export default function RegisterPage() {
                       placeholder="••••••••"
                       required
                       minLength={8}
-                      className="h-10 w-full px-3 pr-10 rounded-lg border border-zinc-200 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
+                      className="h-10 w-full px-3 pr-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717b] hover:text-zinc-900 bg-transparent border-0 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717b] hover:text-zinc-900 dark:hover:text-zinc-50 bg-transparent border-0 cursor-pointer"
                     >
                       {showPassword ? (
                         <EyeOff className="size-4" />
@@ -204,7 +204,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="confirm-password" className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">
+                  <label htmlFor="confirm-password" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                     Confirm Password
                   </label>
                   <div className="relative">
@@ -216,12 +216,12 @@ export default function RegisterPage() {
                       placeholder="••••••••"
                       required
                       minLength={8}
-                      className="h-10 w-full px-3 pr-10 rounded-lg border border-zinc-200 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
+                      className="h-10 w-full px-3 pr-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717b] hover:text-zinc-900 bg-transparent border-0 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717b] hover:text-zinc-900 dark:hover:text-zinc-50 bg-transparent border-0 cursor-pointer"
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="size-4" />
@@ -247,9 +247,9 @@ export default function RegisterPage() {
 
               {/* Divider */}
               <div className="flex items-center gap-3 my-5">
-                <div className="flex-1 h-px bg-zinc-200" />
+                <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
                 <span className="text-xs text-[#71717b]">or</span>
-                <div className="flex-1 h-px bg-zinc-200" />
+                <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
               </div>
 
               {/* Google */}
@@ -257,7 +257,7 @@ export default function RegisterPage() {
                 type="button"
                 variant="outline"
                 onClick={handleGoogleLogin}
-                className="w-full h-10 gap-2 border-zinc-200 hover:bg-zinc-50 font-medium text-xs cursor-pointer"
+                className="w-full h-10 gap-2 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 font-medium text-xs cursor-pointer"
               >
                 <svg className="size-4" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />

@@ -201,9 +201,9 @@ export default function AssistantPage() {
           "    return items.filter((item) => item.active);\n" +
           "  }, [items]);\n\n" +
           "  return (\n" +
-          "    <div className='p-4 rounded-xl border border-zinc-200 bg-white'>\n" +
+          "    <div className='p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'>\n" +
           "      <h3 className='font-bold text-lg'>{topic}</h3>\n" +
-          "      <p className='text-sm text-zinc-600'>Active items: {activeItems.length}</p>\n" +
+          "      <p className='text-sm text-zinc-600 dark:text-zinc-400'>Active items: {activeItems.length}</p>\n" +
           "    </div>\n" +
           "  );\n" +
           "}\n" +
@@ -268,7 +268,7 @@ export default function AssistantPage() {
   return (
     <div className="max-w-4xl mx-auto flex flex-col h-[calc(100vh-140px)] min-h-[620px] gap-4">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-zinc-200/60 flex-wrap gap-2">
+      <div className="flex items-center justify-between pb-2 border-b border-zinc-200/60 dark:border-zinc-800/60 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <div className="size-10 rounded-xl bg-[#2b7fff]/10 text-[#2b7fff] flex items-center justify-center">
             <Sparkles className="size-5" />
@@ -291,7 +291,7 @@ export default function AssistantPage() {
             variant="ghost"
             size="sm"
             onClick={handleClearChat}
-            className="h-8 text-xs text-zinc-400 hover:text-red-600 gap-1.5 rounded-lg"
+            className="h-8 text-xs text-zinc-400 dark:text-zinc-500 hover:text-red-600 gap-1.5 rounded-lg"
           >
             <Trash2 className="size-3.5" />
             Clear
@@ -308,7 +308,7 @@ export default function AssistantPage() {
       </div>
 
       {/* Messages Container */}
-      <Card className="flex-1 p-6 overflow-y-auto backdrop-blur-xl bg-white/75 border-zinc-200/60 shadow-xl shadow-[#2b7fff]/5 flex flex-col gap-4">
+      <Card className="flex-1 p-6 overflow-y-auto backdrop-blur-xl bg-white/75 border-zinc-200/60 dark:border-zinc-800/60 shadow-xl shadow-[#2b7fff]/5 flex flex-col gap-4">
         {isLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
             <Loader2 className="size-8 text-[#2b7fff] animate-spin" />
@@ -329,7 +329,7 @@ export default function AssistantPage() {
                   className={`size-8 rounded-xl shrink-0 flex items-center justify-center text-xs font-semibold ${
                     isUser
                       ? "bg-[#2b7fff] text-white shadow-md shadow-[#2b7fff]/20"
-                      : "bg-zinc-100 text-zinc-700 border border-zinc-200"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800"
                   }`}
                 >
                   {isUser ? <UserIcon className="size-4" /> : <Bot className="size-4 text-[#2b7fff]" />}
@@ -340,7 +340,7 @@ export default function AssistantPage() {
                   className={`p-4 rounded-2xl max-w-[85%] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
                     isUser
                       ? "bg-[#2b7fff] text-white rounded-tr-none shadow-md shadow-[#2b7fff]/15"
-                      : "bg-white border border-zinc-200/70 text-zinc-900 rounded-tl-none shadow-sm font-sans"
+                      : "bg-white dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800/70 text-zinc-900 dark:text-zinc-50 rounded-tl-none shadow-sm font-sans"
                   }`}
                 >
                   {msg.content}
@@ -352,10 +352,10 @@ export default function AssistantPage() {
 
         {isSending && (
           <div className="flex gap-3 items-start">
-            <div className="size-8 rounded-xl shrink-0 bg-zinc-100 text-zinc-700 border border-zinc-200 flex items-center justify-center">
+            <div className="size-8 rounded-xl shrink-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center">
               <Bot className="size-4 text-[#2b7fff]" />
             </div>
-            <div className="p-4 rounded-2xl bg-white border border-zinc-200/70 rounded-tl-none shadow-sm flex items-center gap-2 text-xs text-[#71717b]">
+            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800/70 rounded-tl-none shadow-sm flex items-center gap-2 text-xs text-[#71717b]">
               <Loader2 className="size-3.5 text-[#2b7fff] animate-spin" />
               PathAI is formulating response...
             </div>
@@ -373,7 +373,7 @@ export default function AssistantPage() {
               key={qp.label}
               type="button"
               onClick={() => handleSendMessage(qp.prompt)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-200 bg-white/90 hover:bg-zinc-50 hover:border-[#2b7fff]/40 text-xs font-semibold text-zinc-700 shadow-sm transition-all cursor-pointer whitespace-nowrap"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white/90 hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:border-[#2b7fff]/40 text-xs font-semibold text-zinc-700 dark:text-zinc-300 shadow-sm transition-all cursor-pointer whitespace-nowrap"
             >
               <Icon className="size-3 text-[#2b7fff]" />
               {qp.label}
@@ -389,7 +389,7 @@ export default function AssistantPage() {
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           placeholder={`Ask anything about ${activeTopic} or request coding assistance...`}
-          className="flex-1 h-12 px-4 rounded-xl border border-zinc-200/80 bg-white/95 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] shadow-sm transition-all"
+          className="flex-1 h-12 px-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/95 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] shadow-sm transition-all"
         />
         <Button
           type="submit"

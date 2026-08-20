@@ -428,7 +428,7 @@ export default function RoadmapPage() {
               variant="outline"
               size="sm"
               onClick={() => setIsModifying(true)}
-              className="h-7 text-xs gap-1.5 rounded-full border-zinc-200 text-[#71717b] hover:text-[#2b7fff] cursor-pointer"
+              className="h-7 text-xs gap-1.5 rounded-full border-zinc-200 dark:border-zinc-800 text-[#71717b] hover:text-[#2b7fff] cursor-pointer"
             >
               <RefreshCw className="size-3" />
               Modify Roadmap
@@ -438,7 +438,7 @@ export default function RoadmapPage() {
               variant="outline"
               size="sm"
               onClick={handleExportRoadmap}
-              className="h-7 text-xs gap-1.5 rounded-full border-zinc-200 text-[#71717b] hover:text-zinc-900 cursor-pointer"
+              className="h-7 text-xs gap-1.5 rounded-full border-zinc-200 dark:border-zinc-800 text-[#71717b] hover:text-zinc-900 dark:hover:text-zinc-50 cursor-pointer"
             >
               <Download className="size-3" />
               Export JSON
@@ -448,7 +448,7 @@ export default function RoadmapPage() {
               variant="outline"
               size="sm"
               onClick={handleShareLink}
-              className="h-7 text-xs gap-1.5 rounded-full border-zinc-200 text-[#71717b] hover:text-zinc-900 cursor-pointer"
+              className="h-7 text-xs gap-1.5 rounded-full border-zinc-200 dark:border-zinc-800 text-[#71717b] hover:text-zinc-900 dark:hover:text-zinc-50 cursor-pointer"
             >
               <Share2 className="size-3" />
               {copiedLink ? "Copied Link!" : "Share"}
@@ -488,7 +488,7 @@ export default function RoadmapPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
         {/* Left Column: Learning Stages Timeline (2 Cols) */}
         <div className="lg:col-span-2 flex flex-col">
-          <Card className="backdrop-blur-xl shadow-xl shadow-[#2b7fff]/5 bg-white/60 border-zinc-200/60 p-6 md:p-8 gap-6">
+          <Card className="backdrop-blur-xl shadow-xl shadow-[#2b7fff]/5 bg-white/60 border-zinc-200/60 dark:border-zinc-800/60 p-6 md:p-8 gap-6">
             <CardHeader className="p-0 gap-1 mb-6">
               <CardTitle className="font-bold text-lg leading-7">
                 Learning Stages
@@ -534,7 +534,7 @@ export default function RoadmapPage() {
                             ? "shadow-lg shadow-[#2b7fff]/30 bg-[#2b7fff] text-blue-50"
                             : isInProgress
                             ? "shadow-lg shadow-[#2b7fff]/40 ring-4 ring-[#2b7fff]/20 bg-[#2b7fff] text-blue-50"
-                            : "bg-zinc-100 text-[#71717b] border border-zinc-200"
+                            : "bg-zinc-100 dark:bg-zinc-800 text-[#71717b] border border-zinc-200 dark:border-zinc-800"
                         }`}
                       >
                         <Icon className="size-6" />
@@ -545,7 +545,7 @@ export default function RoadmapPage() {
                         <div className="flex items-center gap-2">
                           <span
                             className={`font-semibold text-base leading-6 ${
-                              !isCompleted && !isInProgress ? "text-[#71717b]" : "text-zinc-950"
+                              !isCompleted && !isInProgress ? "text-[#71717b]" : "text-zinc-950 dark:text-zinc-50"
                             }`}
                           >
                             {phase.title}
@@ -561,7 +561,7 @@ export default function RoadmapPage() {
                           ) : (
                             <Badge
                               variant="outline"
-                              className="rounded-full text-[10px] px-2 py-0 text-zinc-500"
+                              className="rounded-full text-[10px] px-2 py-0 text-zinc-500 dark:text-zinc-500"
                             >
                               Upcoming
                             </Badge>
@@ -595,7 +595,7 @@ export default function RoadmapPage() {
         {/* Right Column: Stage Milestones Details & AI Insight (1 Col) */}
         <div className="lg:col-span-1 flex flex-col gap-6">
           {/* Dynamic Milestones Card for Selected Stage */}
-          <Card className="backdrop-blur-xl shadow-xl shadow-[#2b7fff]/10 bg-white/70 border-zinc-200/60 p-6 gap-4 flex flex-col">
+          <Card className="backdrop-blur-xl shadow-xl shadow-[#2b7fff]/10 bg-white/70 border-zinc-200/60 dark:border-zinc-800/60 p-6 gap-4 flex flex-col">
             <CardHeader className="p-0 gap-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -633,7 +633,7 @@ export default function RoadmapPage() {
                 return (
                   <div
                     key={topic.topicId}
-                    className="group flex items-center justify-between rounded-xl bg-zinc-100/60 hover:bg-zinc-100 p-3 transition-colors text-sm"
+                    className="group flex items-center justify-between rounded-xl bg-zinc-100/60 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-800 p-3 transition-colors text-sm"
                   >
                     <label className="flex items-center gap-3 cursor-pointer flex-1 select-none">
                       <Checkbox
@@ -642,7 +642,7 @@ export default function RoadmapPage() {
                       />
                       <span
                         className={`font-medium transition-all ${
-                          isChecked ? "line-through text-zinc-400" : "text-zinc-800"
+                          isChecked ? "line-through text-zinc-400 dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"
                         }`}
                       >
                         {topic.title}
@@ -657,7 +657,7 @@ export default function RoadmapPage() {
                         setAiAnswer(null);
                         setUserQuestion("");
                       }}
-                      className="text-zinc-400 hover:text-[#2b7fff] p-1.5 rounded-lg hover:bg-white transition-colors bg-transparent border-0 cursor-pointer"
+                      className="text-zinc-400 dark:text-zinc-500 hover:text-[#2b7fff] p-1.5 rounded-lg hover:bg-white dark:hover:bg-zinc-950 transition-colors bg-transparent border-0 cursor-pointer"
                     >
                       <HelpCircle className="size-4" />
                     </button>
@@ -690,7 +690,7 @@ export default function RoadmapPage() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <p className="text-zinc-950/80 text-sm leading-relaxed">
+              <p className="text-zinc-950/80 dark:text-zinc-50/80 text-sm leading-relaxed">
                 {progressPercent >= 60
                   ? "Outstanding velocity! You have completed over 60% of your roadmap. Dive into the Projects stage to build your portfolio assets."
                   : progressPercent > 0
@@ -705,7 +705,7 @@ export default function RoadmapPage() {
       {/* ─── Topic Cross-Questioning Modal ─────────────────────────────────── */}
       {activeQuestionTopic && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-zinc-200 max-w-lg w-full p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-zinc-950 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 max-w-lg w-full p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between">
               <div>
                 <Badge
@@ -714,7 +714,7 @@ export default function RoadmapPage() {
                 >
                   Topic Deep Dive
                 </Badge>
-                <h3 className="font-bold text-lg text-zinc-900">
+                <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-50">
                   {activeQuestionTopic.title}
                 </h3>
                 <p className="text-xs text-[#71717b]">
@@ -723,14 +723,14 @@ export default function RoadmapPage() {
               </div>
               <button
                 onClick={() => setActiveQuestionTopic(null)}
-                className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg bg-transparent border-0 cursor-pointer"
+                className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 p-1 rounded-lg bg-transparent border-0 cursor-pointer"
               >
                 <X className="size-5" />
               </button>
             </div>
 
             {aiAnswer ? (
-              <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-100 max-h-64 overflow-y-auto text-xs text-zinc-800 leading-relaxed whitespace-pre-wrap">
+              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-900 max-h-64 overflow-y-auto text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-[#2b7fff] mb-2">
                   <Sparkles className="size-3.5" /> PathAI Explanation:
                 </div>
@@ -739,7 +739,7 @@ export default function RoadmapPage() {
             ) : null}
 
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-zinc-700">
+              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                 What would you like to understand about {activeQuestionTopic.title}?
               </label>
               <div className="flex gap-2">
@@ -749,7 +749,7 @@ export default function RoadmapPage() {
                   onChange={(e) => setUserQuestion(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAskQuestion()}
                   placeholder="e.g. Why is this important? Give me a code example."
-                  className="h-10 px-3 flex-1 rounded-xl border border-zinc-200 bg-white text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
+                  className="h-10 px-3 flex-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
                 />
                 <Button
                   onClick={handleAskQuestion}
@@ -765,8 +765,8 @@ export default function RoadmapPage() {
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-2 border-t border-zinc-100 text-xs">
-              <span className="text-zinc-500">Need full practice?</span>
+            <div className="flex justify-between items-center pt-2 border-t border-zinc-100 dark:border-zinc-900 text-xs">
+              <span className="text-zinc-500 dark:text-zinc-500">Need full practice?</span>
               <Button
                 variant="link"
                 size="sm"
@@ -787,7 +787,7 @@ export default function RoadmapPage() {
       {/* ─── Modify Roadmap Dialog ─────────────────────────────────────────── */}
       {isModifying && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-zinc-200 max-w-lg w-full p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-zinc-950 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 max-w-lg w-full p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-start justify-between">
               <div>
                 <Badge
@@ -796,7 +796,7 @@ export default function RoadmapPage() {
                 >
                   AI Adaptation
                 </Badge>
-                <h3 className="font-bold text-lg text-zinc-900">
+                <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-50">
                   Modify Your Learning Roadmap
                 </h3>
                 <p className="text-xs text-[#71717b]">
@@ -805,7 +805,7 @@ export default function RoadmapPage() {
               </div>
               <button
                 onClick={() => setIsModifying(false)}
-                className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg bg-transparent border-0 cursor-pointer"
+                className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 p-1 rounded-lg bg-transparent border-0 cursor-pointer"
               >
                 <X className="size-5" />
               </button>
@@ -816,7 +816,7 @@ export default function RoadmapPage() {
               onChange={(e) => setModifyPrompt(e.target.value)}
               rows={4}
               placeholder="e.g. Focus more on Next.js App Router and full-stack deployment, reduce basic CSS..."
-              className="p-3 rounded-xl border border-zinc-200 bg-white text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] resize-none"
+              className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] resize-none"
             />
 
             <div className="flex justify-end gap-2">

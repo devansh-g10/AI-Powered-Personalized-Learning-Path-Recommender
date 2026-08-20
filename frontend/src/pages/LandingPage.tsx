@@ -139,12 +139,12 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
       {/* ─── Hero Section ─────────────────────────────────────────────────── */}
       <section className="relative pt-6 sm:pt-14 text-center flex flex-col items-center gap-7 max-w-4xl mx-auto z-10">
         {/* Floating Frosted Pill */}
-        <div className="glass-pill inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-xs font-semibold text-zinc-800 shadow-sm animate-in fade-in zoom-in-95 duration-500 hover:scale-105 transition-transform cursor-default">
+        <div className="glass-pill inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-xs font-semibold text-zinc-800 dark:text-zinc-200 shadow-sm animate-in fade-in zoom-in-95 duration-500 hover:scale-105 transition-transform cursor-default">
           <span className="flex h-2 w-2 relative">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2b7fff] opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2b7fff]" />
           </span>
-          <span className="text-zinc-600 font-medium">Next-Gen Personalized Engineering Platform</span>
+          <span className="text-zinc-600 dark:text-zinc-400 font-medium">Next-Gen Personalized Engineering Platform</span>
           <span className="text-[#2b7fff] font-bold flex items-center gap-0.5">
             PathAI 2.0 <ChevronRight className="size-3.5" />
           </span>
@@ -152,10 +152,10 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
 
         {/* Hero Title */}
         <div className="mx-auto max-w-5xl text-center">
-          <h1 className="font-display text-[clamp(3.2rem,6.5vw,6.2rem)] font-semibold leading-[0.98] tracking-[-0.06em] text-zinc-950">
+          <h1 className="font-display text-[clamp(3.2rem,6.5vw,6.2rem)] font-semibold leading-[0.98] tracking-[-0.06em] text-zinc-950 dark:text-zinc-50">
             Stop guessing
             <br />
-            <span className="text-zinc-400">what to learn next.</span>
+            <span className="text-zinc-400 dark:text-zinc-500">what to learn next.</span>
             <br />
             <span className="bg-gradient-to-r from-[#2563eb] via-[#4f46e5] to-[#7c3aed] bg-clip-text text-transparent">
               Flowstep knows.
@@ -164,7 +164,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
         </div>
 
         {/* Hero Description */}
-        <p className="text-base sm:text-lg text-zinc-600 max-w-2xl leading-relaxed font-normal">
+        <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed font-normal">
           Stop wondering what to learn next. PathAI analyzes your current background and target career ambitions to synthesize tailored, milestone-driven curriculums with built-in AI tutoring.
         </p>
 
@@ -184,7 +184,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
             size="lg"
             variant="outline"
             onClick={() => navigate("/roadmap")}
-            className="w-full sm:w-auto h-12 px-7 rounded-xl border-white/80 bg-white/70 hover:bg-white/95 backdrop-blur-xl text-zinc-800 font-semibold text-sm shadow-sm gap-2 cursor-pointer transition-all hover:border-[#2b7fff]/30"
+            className="w-full sm:w-auto h-12 px-7 rounded-xl border-white/80 bg-white/70 hover:bg-white/95 backdrop-blur-xl text-zinc-800 dark:text-zinc-200 font-semibold text-sm shadow-sm gap-2 cursor-pointer transition-all hover:border-[#2b7fff]/30"
           >
             <Compass className="size-4 text-[#2b7fff]" />
             Explore Flagship Roadmap
@@ -192,7 +192,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
         </div>
 
         {/* Social Proof Strip */}
-        <div className="flex items-center justify-center gap-6 pt-3 text-xs text-zinc-500 flex-wrap">
+        <div className="flex items-center justify-center gap-6 pt-3 text-xs text-zinc-500 dark:text-zinc-500 flex-wrap">
           <span className="flex items-center gap-1.5 font-medium">
             <CheckCircle2 className="size-4 text-emerald-500" /> Open Guest Access
           </span>
@@ -208,15 +208,15 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
         <div className="w-full mt-10 rounded-3xl p-1.5 sm:p-2.5 bg-gradient-to-b from-white/90 via-white/40 to-white/10 backdrop-blur-2xl border border-white shadow-[0_25px_60px_-15px_rgba(43,127,255,0.12)]">
           <div className="glass-card rounded-[22px] p-6 sm:p-8 flex flex-col gap-6 text-left">
             {/* Interactive Tab Switcher */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-zinc-200/50">
-              <div className="flex items-center gap-2 p-1 rounded-xl bg-zinc-100/70 border border-zinc-200/60 backdrop-blur-md">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-zinc-200/50 dark:border-zinc-800/50">
+              <div className="flex items-center gap-2 p-1 rounded-xl bg-zinc-100/70 dark:bg-zinc-800/70 border border-zinc-200/60 dark:border-zinc-800/60 backdrop-blur-md">
                 <button
                   type="button"
                   onClick={() => setActiveTab("frontend")}
                   className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border-0 cursor-pointer ${
                     activeTab === "frontend"
-                      ? "bg-white text-[#2b7fff] shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-950 bg-transparent"
+                      ? "bg-white dark:bg-zinc-950 text-[#2b7fff] shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-50 bg-transparent"
                   }`}
                 >
                   Frontend Core
@@ -226,8 +226,8 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
                   onClick={() => setActiveTab("ai")}
                   className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border-0 cursor-pointer ${
                     activeTab === "ai"
-                      ? "bg-white text-[#2b7fff] shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-950 bg-transparent"
+                      ? "bg-white dark:bg-zinc-950 text-[#2b7fff] shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-50 bg-transparent"
                   }`}
                 >
                   AI Agents & LLM
@@ -237,8 +237,8 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
                   onClick={() => setActiveTab("devops")}
                   className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border-0 cursor-pointer ${
                     activeTab === "devops"
-                      ? "bg-white text-[#2b7fff] shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-950 bg-transparent"
+                      ? "bg-white dark:bg-zinc-950 text-[#2b7fff] shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-50 bg-transparent"
                   }`}
                 >
                   Cloud DevOps
@@ -252,8 +252,8 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
 
             {/* Track Headline & Description */}
             <div>
-              <h3 className="font-display font-bold text-xl text-zinc-950 mb-1">{currentTrack.title}</h3>
-              <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed max-w-2xl">{currentTrack.desc}</p>
+              <h3 className="font-display font-bold text-xl text-zinc-950 dark:text-zinc-50 mb-1">{currentTrack.title}</h3>
+              <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-2xl">{currentTrack.desc}</p>
             </div>
 
             {/* Split View: Stages Timeline + Code Preview Card */}
@@ -268,14 +268,14 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
                         ? "bg-emerald-50/60 border-emerald-200/80 text-emerald-900"
                         : stg.active
                         ? "bg-[#2b7fff]/10 border-[#2b7fff]/30 shadow-sm"
-                        : "bg-white/50 border-zinc-200/60 text-zinc-600"
+                        : "bg-white/50 border-zinc-200/60 dark:border-zinc-800/60 text-zinc-600 dark:text-zinc-400"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="size-6 rounded-lg bg-white/80 border border-zinc-200 flex items-center justify-center text-xs font-bold text-zinc-700">
+                      <span className="size-6 rounded-lg bg-white/80 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-700 dark:text-zinc-300">
                         {idx + 1}
                       </span>
-                      <span className={`text-xs font-bold ${stg.active ? "text-[#2b7fff]" : "text-zinc-800"}`}>
+                      <span className={`text-xs font-bold ${stg.active ? "text-[#2b7fff]" : "text-zinc-800 dark:text-zinc-200"}`}>
                         {stg.name}
                       </span>
                     </div>
@@ -287,7 +287,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
                           ? "bg-emerald-100 text-emerald-800 border-0"
                           : stg.active
                           ? "bg-[#2b7fff] text-white border-0"
-                          : "bg-zinc-100 text-zinc-500"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-500"
                       }`}
                     >
                       {stg.tag}
@@ -298,7 +298,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
 
               {/* Code Snippet Card (5 cols) */}
               <div className="lg:col-span-5 rounded-2xl bg-zinc-950 p-4 text-white shadow-xl flex flex-col gap-3 font-mono text-xs border border-zinc-800">
-                <div className="flex items-center justify-between pb-2 border-b border-zinc-800 text-[11px] text-zinc-400">
+                <div className="flex items-center justify-between pb-2 border-b border-zinc-800 text-[11px] text-zinc-400 dark:text-zinc-500">
                   <span className="flex items-center gap-1.5">
                     <Terminal className="size-3.5 text-[#2b7fff]" />
                     architecture-pipeline.ts
@@ -314,7 +314,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
                   {currentTrack.codeSnippet}
                 </pre>
 
-                <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
+                <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400 dark:text-zinc-500">
                   <span className="text-emerald-400 flex items-center gap-1">
                     <Check className="size-3" /> Grounded in AST
                   </span>
@@ -338,10 +338,10 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
           <Badge variant="secondary" className="glass-pill text-[#2b7fff] text-xs px-3.5 py-1 w-fit mx-auto font-semibold">
             Bespoke Architecture
           </Badge>
-          <h2 className="font-display font-black text-3xl sm:text-4xl text-zinc-950 tracking-[-0.03em]">
+          <h2 className="font-display font-black text-3xl sm:text-4xl text-zinc-950 dark:text-zinc-50 tracking-[-0.03em]">
             Engineered to replace unstructured tutorials
           </h2>
-          <p className="text-sm text-zinc-600 leading-relaxed font-normal">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-normal">
             Every layer of PathAI is built around deliberate practice, verified comprehension, and tangible project deliverables.
           </p>
         </div>
@@ -361,8 +361,8 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
                   <span className="text-[10px] uppercase font-bold tracking-wider text-[#2b7fff] block mb-1">
                     {feat.tagline}
                   </span>
-                  <h3 className="font-display font-bold text-base text-zinc-950 mb-2">{feat.title}</h3>
-                  <p className="text-xs text-zinc-600 leading-relaxed">{feat.desc}</p>
+                  <h3 className="font-display font-bold text-base text-zinc-950 dark:text-zinc-50 mb-2">{feat.title}</h3>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">{feat.desc}</p>
                 </div>
               </div>
             );
@@ -374,7 +374,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
       <section className="glass-card rounded-3xl p-8 sm:p-12 flex flex-col gap-10 z-10">
         <div className="text-center max-w-xl mx-auto flex flex-col gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-[#2b7fff]">How It Works</span>
-          <h2 className="font-display font-black text-3xl text-zinc-950 tracking-tight">
+          <h2 className="font-display font-black text-3xl text-zinc-950 dark:text-zinc-50 tracking-tight">
             From Goal to Production-Ready Mastery
           </h2>
         </div>
@@ -382,24 +382,24 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="flex flex-col gap-3 p-5 rounded-2xl bg-white/60 border border-white shadow-sm">
             <span className="font-display font-black text-4xl text-[#2b7fff] tracking-tight">01</span>
-            <h3 className="font-display font-bold text-lg text-zinc-950">Specify Your Goal & Hours</h3>
-            <p className="text-xs text-zinc-600 leading-relaxed font-normal">
+            <h3 className="font-display font-bold text-lg text-zinc-950 dark:text-zinc-50">Specify Your Goal & Hours</h3>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-normal">
               Tell the profiler whether you're learning React, AI Agents, or DevOps, your current comfort level, and weekly availability.
             </p>
           </div>
 
           <div className="flex flex-col gap-3 p-5 rounded-2xl bg-white/60 border border-white shadow-sm">
             <span className="font-display font-black text-4xl text-[#2b7fff] tracking-tight">02</span>
-            <h3 className="font-display font-bold text-lg text-zinc-950">Receive Interconnected Stages</h3>
-            <p className="text-xs text-zinc-600 leading-relaxed font-normal">
+            <h3 className="font-display font-bold text-lg text-zinc-950 dark:text-zinc-50">Receive Interconnected Stages</h3>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-normal">
               Get an interconnected 5-stage timeline with verified milestones, time estimates, and curated tutorials.
             </p>
           </div>
 
           <div className="flex flex-col gap-3 p-5 rounded-2xl bg-white/60 border border-white shadow-sm">
             <span className="font-display font-black text-4xl text-[#2b7fff] tracking-tight">03</span>
-            <h3 className="font-display font-bold text-lg text-zinc-950">Build with Real-Time AI Tutor</h3>
-            <p className="text-xs text-zinc-600 leading-relaxed font-normal">
+            <h3 className="font-display font-bold text-lg text-zinc-950 dark:text-zinc-50">Build with Real-Time AI Tutor</h3>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-normal">
               Ask deep-dive questions on difficult concepts, write code samples, and track your verified skill competencies.
             </p>
           </div>
@@ -422,10 +422,10 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
           <Badge variant="secondary" className="glass-pill text-[#2b7fff] text-xs px-3.5 py-1 w-fit mx-auto font-semibold">
             Common Inquiries
           </Badge>
-          <h2 className="font-display font-black text-3xl sm:text-4xl text-zinc-950 tracking-tight">
+          <h2 className="font-display font-black text-3xl sm:text-4xl text-zinc-950 dark:text-zinc-50 tracking-tight">
             Frequently Asked Questions
           </h2>
-          <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
+          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
             Everything you need to know about how PathAI creates, adapts, and verifies your engineering pathway.
           </p>
         </div>
@@ -443,18 +443,18 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <HelpCircle className={`size-4 shrink-0 transition-colors ${isOpen ? "text-[#2b7fff]" : "text-zinc-400"}`} />
-                    <h3 className="font-semibold text-sm text-zinc-900 leading-snug">{faq.q}</h3>
+                    <HelpCircle className={`size-4 shrink-0 transition-colors ${isOpen ? "text-[#2b7fff]" : "text-zinc-400 dark:text-zinc-500"}`} />
+                    <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-50 leading-snug">{faq.q}</h3>
                   </div>
                   <ChevronDown
-                    className={`size-4 text-zinc-400 shrink-0 transition-transform duration-200 ${
+                    className={`size-4 text-zinc-400 dark:text-zinc-500 shrink-0 transition-transform duration-200 ${
                       isOpen ? "rotate-180 text-[#2b7fff]" : ""
                     }`}
                   />
                 </div>
 
                 {isOpen && (
-                  <p className="text-xs text-zinc-600 leading-relaxed mt-3 pl-7 pt-2 border-t border-zinc-100">
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed mt-3 pl-7 pt-2 border-t border-zinc-100 dark:border-zinc-900">
                     {faq.a}
                   </p>
                 )}
@@ -498,7 +498,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
           <Button
             size="lg"
             onClick={() => navigate("/conversations/new/questionnaire")}
-            className="w-full sm:w-auto h-13 px-9 rounded-2xl bg-white text-[#1e3a8a] hover:bg-blue-50 font-extrabold text-sm shadow-[0_0_50px_rgba(255,255,255,0.45)] hover:shadow-[0_0_70px_rgba(255,255,255,0.7)] gap-2.5 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95"
+            className="w-full sm:w-auto h-13 px-9 rounded-2xl bg-white dark:bg-zinc-950 text-[#1e3a8a] hover:bg-blue-50 font-extrabold text-sm shadow-[0_0_50px_rgba(255,255,255,0.45)] hover:shadow-[0_0_70px_rgba(255,255,255,0.7)] gap-2.5 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95"
           >
             <Sparkles className="size-4 text-[#2563eb]" />
             Generate My Roadmap Free
@@ -547,7 +547,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
       </section>
 
       {/* ─── Rich 4-Column Professional Footer ─────────────────────────────── */}
-      <footer className="glass-card rounded-3xl p-8 sm:p-12 flex flex-col gap-10 border border-zinc-200/70 shadow-lg z-10">
+      <footer className="glass-card rounded-3xl p-8 sm:p-12 flex flex-col gap-10 border border-zinc-200/70 dark:border-zinc-800/70 shadow-lg z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand Col (2 cols) */}
           <div className="lg:col-span-2 flex flex-col gap-4">
@@ -555,10 +555,10 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
               <div className="size-9 rounded-xl bg-[#2b7fff] text-white flex items-center justify-center shadow-lg shadow-[#2b7fff]/30">
                 <Route className="size-5" />
               </div>
-              <span className="font-display font-bold text-2xl tracking-tight text-zinc-950">PathAI</span>
+              <span className="font-display font-bold text-2xl tracking-tight text-zinc-950 dark:text-zinc-50">PathAI</span>
             </div>
 
-            <p className="text-xs text-zinc-600 leading-relaxed max-w-sm">
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-sm">
               The hyper-personalized curriculum engine for engineers. Transform career goals into structured, milestone-driven technical pathways with grounded AI tutoring.
             </p>
 
@@ -572,34 +572,34 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
 
           {/* Product Links */}
           <div className="flex flex-col gap-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-950">Product</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-950 dark:text-zinc-50">Product</span>
             <button
               onClick={() => navigate("/dashboard")}
-              className="text-left text-xs text-zinc-600 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
+              className="text-left text-xs text-zinc-600 dark:text-zinc-400 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
             >
               Learning Dashboard
             </button>
             <button
               onClick={() => navigate("/roadmap")}
-              className="text-left text-xs text-zinc-600 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
+              className="text-left text-xs text-zinc-600 dark:text-zinc-400 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
             >
               Interactive Roadmap
             </button>
             <button
               onClick={() => navigate("/skills")}
-              className="text-left text-xs text-zinc-600 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
+              className="text-left text-xs text-zinc-600 dark:text-zinc-400 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
             >
               Competency Radar
             </button>
             <button
               onClick={() => navigate("/recommendations")}
-              className="text-left text-xs text-zinc-600 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
+              className="text-left text-xs text-zinc-600 dark:text-zinc-400 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
             >
               Curated Resources
             </button>
             <button
               onClick={() => navigate("/assistant")}
-              className="text-left text-xs text-zinc-600 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
+              className="text-left text-xs text-zinc-600 dark:text-zinc-400 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
             >
               AI Code Tutor
             </button>
@@ -607,28 +607,28 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
 
           {/* Curated Pathways */}
           <div className="flex flex-col gap-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-950">Tracks</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-950 dark:text-zinc-50">Tracks</span>
             <button
               onClick={() => navigate("/roadmap")}
-              className="text-left text-xs text-zinc-600 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
+              className="text-left text-xs text-zinc-600 dark:text-zinc-400 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
             >
               React 19 & Frontend
             </button>
             <button
               onClick={() => navigate("/roadmap")}
-              className="text-left text-xs text-zinc-600 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
+              className="text-left text-xs text-zinc-600 dark:text-zinc-400 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
             >
               Full-Stack AI Agents
             </button>
             <button
               onClick={() => navigate("/roadmap")}
-              className="text-left text-xs text-zinc-600 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
+              className="text-left text-xs text-zinc-600 dark:text-zinc-400 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
             >
               Docker & Kubernetes CI/CD
             </button>
             <button
               onClick={() => navigate("/roadmap")}
-              className="text-left text-xs text-zinc-600 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
+              className="text-left text-xs text-zinc-600 dark:text-zinc-400 hover:text-[#2b7fff] transition-colors bg-transparent border-0 cursor-pointer p-0"
             >
               Distributed System Design
             </button>
@@ -636,36 +636,36 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
 
           {/* Platform & Trust */}
           <div className="flex flex-col gap-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-950">Platform</span>
-            <span className="text-xs text-zinc-600 flex items-center gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-950 dark:text-zinc-50">Platform</span>
+            <span className="text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
               <ShieldCheck className="size-3.5 text-emerald-600" /> Open Guest Mode
             </span>
-            <span className="text-xs text-zinc-600 flex items-center gap-1.5">
+            <span className="text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
               <Lock className="size-3.5 text-blue-600" /> Local Storage Sync
             </span>
-            <span className="text-xs text-zinc-600 flex items-center gap-1.5">
+            <span className="text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
               <Code2 className="size-3.5 text-purple-600" /> AST Code Verification
             </span>
-            <span className="text-xs text-zinc-600 flex items-center gap-1.5">
+            <span className="text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
               <Activity className="size-3.5 text-amber-600" /> Real-time Pacing
             </span>
           </div>
         </div>
 
         {/* Bottom Sub-bar */}
-        <div className="pt-6 border-t border-zinc-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
+        <div className="pt-6 border-t border-zinc-200/80 dark:border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 dark:text-zinc-500">
           <span>© 2026 PathAI. Built for ambitious software engineers worldwide.</span>
           <div className="flex items-center gap-6">
             <button
               onClick={() => navigate("/conversations/new/questionnaire")}
-              className="text-xs text-zinc-600 hover:text-zinc-900 bg-transparent border-0 cursor-pointer"
+              className="text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 bg-transparent border-0 cursor-pointer"
             >
               Start Free Journey
             </button>
             <span>•</span>
             <button
               onClick={() => navigate("/roadmap")}
-              className="text-xs text-zinc-600 hover:text-zinc-900 bg-transparent border-0 cursor-pointer"
+              className="text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 bg-transparent border-0 cursor-pointer"
             >
               Demo Roadmap
             </button>

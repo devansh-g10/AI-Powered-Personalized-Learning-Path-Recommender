@@ -2,6 +2,8 @@
 @import "tailwindcss";
 @import "./tw-animate.css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Fluid full height standards */
 .min-h-screen {
   min-height: 100vh;
@@ -362,4 +364,64 @@ h1, h2, h3, .font-heading {
 }
 .border-r {
   border-color: var(--color-border);
+}
+
+/* ─── Dark Mode Variables ─────────────────────────────────────────────────── */
+.dark {
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  
+  --card: oklch(0.141 0.005 285.823);
+  --card-foreground: oklch(0.985 0 0);
+  
+  --popover: oklch(0.141 0.005 285.823);
+  --popover-foreground: oklch(0.985 0 0);
+  
+  --primary: oklch(0.623 0.214 259.815);
+  --primary-foreground: oklch(0.985 0 0);
+  
+  --secondary: oklch(0.21 0.006 285.885);
+  --secondary-foreground: oklch(0.985 0 0);
+  
+  --muted: oklch(0.21 0.006 285.885);
+  --muted-foreground: oklch(0.7 0.016 285.938);
+  
+  --accent: oklch(0.21 0.006 285.885);
+  --accent-foreground: oklch(0.985 0 0);
+  
+  --destructive: oklch(0.396 0.141 25.723);
+  
+  --border: oklch(0.21 0.006 285.885);
+  --input: oklch(0.21 0.006 285.885);
+  --ring: oklch(0.623 0.214 259.815);
+  
+  --sidebar: oklch(0.141 0.005 285.823);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.623 0.214 259.815);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.21 0.006 285.885);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.21 0.006 285.885);
+  --sidebar-ring: oklch(0.623 0.214 259.815);
+}
+
+/* ─── Dark Mode Glassmorphism ────────────────────────────────────────── */
+.dark .glass-card {
+  background: rgba(9, 9, 11, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+.dark .glass-card-hover:hover {
+  background: rgba(9, 9, 11, 0.88);
+  border-color: rgba(43, 127, 255, 0.35);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+}
+.dark .glass-pill {
+  background: rgba(9, 9, 11, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+.dark .glass-header {
+  background: rgba(9, 9, 11, 0.82);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
