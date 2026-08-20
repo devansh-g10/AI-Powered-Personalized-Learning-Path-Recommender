@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-white relative overflow-hidden">
       <img
         src="https://images.unsplash.com/photo-1557683316-973673baf926?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3ODc2NDd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGJsdWUlMjB2aW9sZXQlMjBncmFkaWVudCUyMHNvZnQlMjBnbG93fGVufDF8MHx8fDE3ODcwMzk1NTB8MA&ixlib=rb-4.1.0&q=80&w=400"
         alt=""
@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
           <span className="font-bold text-xl tracking-tight">PathAI</span>
         </div>
 
-        <div className="backdrop-blur-xl bg-white/60 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl shadow-xl shadow-[#2b7fff]/5 p-8">
+        <div className="backdrop-blur-xl bg-white/60 border border-zinc-200/60 rounded-2xl shadow-xl shadow-[#2b7fff]/5 p-8">
           {success ? (
             <div className="text-center">
               <div className="size-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
@@ -101,7 +101,7 @@ export default function ResetPasswordPage() {
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="new-password" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  <label htmlFor="new-password" className="text-sm font-medium text-zinc-700">
                     New Password
                   </label>
                   <div className="relative">
@@ -113,12 +113,12 @@ export default function ResetPasswordPage() {
                       placeholder="••••••••"
                       required
                       minLength={8}
-                      className="h-10 w-full px-3 pr-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/80 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
+                      className="h-10 w-full px-3 pr-10 rounded-lg border border-zinc-200 bg-white/80 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717b] hover:text-zinc-900 dark:hover:text-zinc-50 bg-transparent border-0 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717b] hover:text-zinc-900 bg-transparent border-0 cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
@@ -126,7 +126,7 @@ export default function ResetPasswordPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="confirm-new-password" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  <label htmlFor="confirm-new-password" className="text-sm font-medium text-zinc-700">
                     Confirm New Password
                   </label>
                   <input
@@ -137,7 +137,7 @@ export default function ResetPasswordPage() {
                     placeholder="••••••••"
                     required
                     minLength={8}
-                    className="h-10 px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/80 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
+                    className="h-10 px-3 rounded-lg border border-zinc-200 bg-white/80 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
                   />
                 </div>
 

@@ -14,6 +14,8 @@ import DashboardPage from "@/pages/DashboardPage";
 import QuestionnairePage from "@/pages/QuestionnairePage";
 import RoadmapPage from "@/pages/RoadmapPage";
 import SkillsPage from "@/pages/SkillsPage";
+import CoursesPage from "@/pages/CoursesPage";
+import CourseDetailPage from "@/pages/CourseDetailPage";
 import RecommendationsPage from "@/pages/RecommendationsPage";
 import AssistantPage from "@/pages/AssistantPage";
 
@@ -44,6 +46,9 @@ export default function App() {
             {/* Primary Navigation Views */}
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/roadmap" element={<RoadmapPage />} />
+            <Route path="/roadmap/:courseId" element={<RoadmapPage />} />
+            <Route path="/courses" element={<CoursesPage />} />
+            <Route path="/courses/:courseId" element={<CourseDetailPage />} />
             <Route path="/skills" element={<SkillsPage />} />
             <Route path="/recommendations" element={<RecommendationsPage />} />
             <Route path="/assistant" element={<AssistantPage />} />

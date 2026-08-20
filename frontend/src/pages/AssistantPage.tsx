@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
   Sparkles,
@@ -8,133 +9,246 @@ import {
   Loader2,
   Code2,
   HelpCircle,
-  Trash2,
-  Lightbulb,
   Zap,
+  CheckCircle2,
+  RefreshCw,
+  Copy,
+  Check,
+  Compass,
+  Route,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { messagesApi, conversationsApi } from "@/lib/api";
+import { messagesApi } from "@/lib/api";
+import {
+  fetchLiveDashboardData,
+  dispatchProgressUpdate,
+  type LearningPathItem,
+  type SkillCompetency,
+} from "@/lib/learning-data";
+import MarkdownRenderer from "@/components/chat/MarkdownRenderer";
+import TutorContextHeader from "@/components/chat/TutorContextHeader";
+import TutorSessionsSidebar, { type ChatSession } from "@/components/chat/TutorSessionsSidebar";
+import { generateContextualTutorResponse } from "@/lib/tutor-engine";
 
-interface MessageItem {
+export interface MessageItem {
   id?: string;
   role: "HUMAN" | "AI";
   content: string;
   createdAt?: string;
   topicTag?: string;
+  codeSnippet?: string;
+  isVerified?: boolean;
 }
-
-const quickPrompts = [
-  { label: "Code Example", prompt: "Can you provide a clean, modern TypeScript/React code example demonstrating this concept?", icon: Code2 },
-  { label: "Mini Project", prompt: "Suggest a 1-hour practical mini project to practice this topic thoroughly.", icon: Zap },
-  { label: "Interview Prep", prompt: "What are the most common technical interview questions asked about this topic?", icon: HelpCircle },
-  { label: "Best Practices", prompt: "What are the top architectural best practices and common anti-patterns to avoid?", icon: Lightbulb },
-];
 
 export default function AssistantPage() {
   const { id: routeConvId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const topicParam = searchParams.get("topic");
+  const navigate = useNavigate();
 
-  const [conversationId, setConversationId] = useState<string | null>(routeConvId || null);
-  const [activeTopic, setActiveTopic] = useState<string>(topicParam || "Frontend Engineering & Core React");
+  // ─── Live Learning Context State ──────────────────────────────────────────────
+  const [activePath, setActivePath] = useState<LearningPathItem | null>(null);
+  const [allPaths, setAllPaths] = useState<LearningPathItem[]>([]);
+  const [skillCompetencies, setSkillCompetencies] = useState<SkillCompetency[]>([]);
+  const [activeTopic, setActiveTopic] = useState<string>(topicParam || "React 19 Hooks & State Architecture");
+
+  // ─── Chat & Sessions State ────────────────────────────────────────────────────
+  const [conversationId, setConversationId] = useState<string>(routeConvId || "session-default");
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   const [messages, setMessages] = useState<MessageItem[]>([
     {
+      id: "init-1",
       role: "AI",
       content:
-        `Hello! I am your PathAI personalized tutor. I am currently tuned to your **${topicParam || "Frontend Engineering"}** learning path.\n\n` +
-        "You can ask me to explain difficult concepts, review code architecture, generate mock interview questions, or provide hands-on practice challenges.",
+        `### 👋 Welcome to PathAI Tutor\n\n` +
+        `I am your personalized AI engineering mentor. I am tuned to your **${topicParam || "React 19 & Full-Stack"}** learning journey.\n\n` +
+        `- Ask me to break down architectural patterns & mental models\n` +
+        `- Request production-ready TypeScript code blueprints\n` +
+        `- Practice with hands-on coding challenges and mock technical interviews\n` +
+        `- Ask **"What should I learn next?"** to diagnose your skill gaps!`,
       createdAt: new Date().toISOString(),
+      topicTag: activeTopic,
     },
   ]);
+
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isSending, scrollToBottom]);
 
-  // If topicParam changed, update and send contextual welcome prompt
+  // ─── 1. Load Live Context from Learning Engine ───────────────────────────────
   useEffect(() => {
-    if (topicParam && topicParam !== activeTopic) {
-      setActiveTopic(topicParam);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "AI",
-          content: `🎯 **Focus Topic:** *${topicParam}*\n\nHow would you like to explore **${topicParam}**? Choose one of the quick prompts below or ask me any question directly!`,
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-    }
-  }, [topicParam]);
+    const loadContext = async () => {
+      try {
+        const fullData = await fetchLiveDashboardData();
+        setAllPaths(fullData.learningPaths);
+        setSkillCompetencies(fullData.skillCompetencies);
 
-  // Load conversation & messages
-  useEffect(() => {
-    const initChat = async () => {
-      let targetId = conversationId;
+        // Find matching or default active path
+        let current = fullData.learningPaths[0] || null;
+        if (routeConvId) {
+          const match = fullData.learningPaths.find((p) => p.id === routeConvId);
+          if (match) current = match;
+        } else if (fullData.continueLearning) {
+          current = fullData.continueLearning;
+        }
 
-      if (!targetId) {
-        try {
-          const { data } = await conversationsApi.list();
-          if (data.conversations && data.conversations.length > 0) {
-            targetId = data.conversations[0].id;
-            setConversationId(targetId);
+        if (current) {
+          setActivePath(current);
+          if (topicParam) {
+            setActiveTopic(topicParam);
+          } else if (current.currentMilestone) {
+            setActiveTopic(current.currentMilestone);
           }
+        }
+      } catch (err) {
+        console.error("Failed to load learning context for tutor:", err);
+      }
+    };
+
+    loadContext();
+  }, [routeConvId, topicParam]);
+
+  // ─── 2. Load Sessions List ───────────────────────────────────────────────────
+  useEffect(() => {
+    const savedSessions = localStorage.getItem("pathai_chat_sessions");
+    if (savedSessions) {
+      try {
+        setSessions(JSON.parse(savedSessions));
+      } catch {
+        setSessions([]);
+      }
+    } else {
+      const defaultSessions: ChatSession[] = [
+        {
+          id: "session-fe",
+          title: "React 19 Hooks & Concurrency",
+          topicTag: "Frontend",
+          lastMessage: "Clean code blueprint for memoized state architecture.",
+          updatedAt: new Date().toISOString(),
+          pathId: "fe-roadmap-01",
+        },
+        {
+          id: "session-ai",
+          title: "LangChain Agents & Function Calling",
+          topicTag: "AI & LLM",
+          lastMessage: "Vector embeddings and hybrid similarity search pipeline.",
+          updatedAt: new Date(Date.now() - 86400000).toISOString(),
+          pathId: "ai-roadmap-02",
+        },
+      ];
+      setSessions(defaultSessions);
+      localStorage.setItem("pathai_chat_sessions", JSON.stringify(defaultSessions));
+    }
+  }, []);
+
+  // ─── 3. Load Messages for Active Conversation ────────────────────────────────
+  useEffect(() => {
+    const loadMessagesForSession = async () => {
+      const activeId = conversationId || "session-default";
+      const stored = localStorage.getItem(`messages_${activeId}`);
+      if (stored) {
+        try {
+          setMessages(JSON.parse(stored));
+          return;
         } catch {
-          // offline fallback
+          // fallback
         }
       }
 
-      if (targetId) {
-        const stored = localStorage.getItem(`messages_${targetId}`);
-        if (stored) {
-          try {
-            setMessages(JSON.parse(stored));
-            return;
-          } catch {
-            // fallback
-          }
-        }
-
+      // Try API if it's a remote conversation
+      if (activeId && !activeId.startsWith("session-") && !activeId.startsWith("conv-")) {
         try {
           setIsLoading(true);
-          const { data } = await messagesApi.list(targetId);
-          if (data.messages && data.messages.length > 0) {
+          const { data } = await messagesApi.list(activeId);
+          if (data?.messages && data.messages.length > 0) {
             setMessages(data.messages);
-            localStorage.setItem(`messages_${targetId}`, JSON.stringify(data.messages));
+            localStorage.setItem(`messages_${activeId}`, JSON.stringify(data.messages));
           }
         } catch {
-          // use default
+          // offline
         } finally {
           setIsLoading(false);
         }
       }
     };
 
-    initChat();
+    loadMessagesForSession();
   }, [conversationId]);
 
-  const saveMessagesLocally = (newMsgs: MessageItem[]) => {
-    const targetId = conversationId || "default_chat";
+  // Save messages to local storage & update session preview
+  const persistMessages = (newMsgs: MessageItem[], targetId = conversationId) => {
     localStorage.setItem(`messages_${targetId}`, JSON.stringify(newMsgs));
+
+    // Update session snippet in list
+    setSessions((prev) => {
+      const last = newMsgs[newMsgs.length - 1];
+      const updated = prev.map((s) => {
+        if (s.id === targetId) {
+          return {
+            ...s,
+            lastMessage: last?.content.slice(0, 80) || s.lastMessage,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return s;
+      });
+      localStorage.setItem("pathai_chat_sessions", JSON.stringify(updated));
+      return updated;
+    });
   };
 
-  const handleSendMessage = async (userTextToSend?: string) => {
-    const text = (userTextToSend || inputMessage).trim();
+  // ─── 4. Dynamic Contextual Action Chips ───────────────────────────────────────
+  const contextualActionChips = [
+    {
+      label: `Explain ${activeTopic.length > 25 ? activeTopic.slice(0, 22) + "..." : activeTopic}`,
+      prompt: `Please explain the core mental model, architectural principle, and production best practices for "${activeTopic}". Include a clean TypeScript example.`,
+      icon: Sparkles,
+    },
+    {
+      label: "Practice Challenge",
+      prompt: `Give me a hands-on 1-hour coding challenge to practice "${activeTopic}". Include starter code and test criteria.`,
+      icon: Zap,
+    },
+    {
+      label: "Mock Interview",
+      prompt: `Ask me a realistic senior technical interview question about "${activeTopic}".`,
+      icon: HelpCircle,
+    },
+    {
+      label: "What should I learn next?",
+      prompt: "What should I learn next based on my current roadmap progress and skill gaps?",
+      icon: Compass,
+    },
+    {
+      label: "Review My Code",
+      prompt: `Here is a component I built for "${activeTopic}". Can you review it for architectural trade-offs, type safety, and performance?`,
+      icon: Code2,
+    },
+  ];
+
+  // ─── 5. Message Sender with Real API & Fallback Mentor Engine ────────────────
+  const handleSendMessage = async (textToSend?: string) => {
+    const text = (textToSend || inputMessage).trim();
     if (!text || isSending) return;
 
     setInputMessage("");
 
     const tempUserMsg: MessageItem = {
+      id: `msg-${Date.now()}`,
       role: "HUMAN",
       content: text,
       createdAt: new Date().toISOString(),
@@ -143,261 +257,397 @@ export default function AssistantPage() {
 
     const updatedWithUser = [...messages, tempUserMsg];
     setMessages(updatedWithUser);
-    saveMessagesLocally(updatedWithUser);
+    persistMessages(updatedWithUser);
     setIsSending(true);
 
-    let targetConvId = conversationId;
-    if (!targetConvId || targetConvId.startsWith("conv-")) {
+    let currentConvId = conversationId;
+
+    // Try backend API call first if valid remote conversation
+    let remoteSuccess = false;
+    if (currentConvId && !currentConvId.startsWith("session-") && !currentConvId.startsWith("conv-")) {
       try {
-        const { data: convData } = await conversationsApi.create(`Chat: ${activeTopic}`);
-        if (convData?.conversation?.id) {
-          targetConvId = convData.conversation.id;
-          setConversationId(targetConvId);
+        const { data } = await messagesApi.send(currentConvId, text);
+        if (data?.message) {
+          const aiMsg: MessageItem = {
+            id: data.messageId || `ai-${Date.now()}`,
+            role: "AI",
+            content: data.message,
+            createdAt: new Date().toISOString(),
+            topicTag: activeTopic,
+          };
+          const updatedWithAi = [...updatedWithUser, aiMsg];
+          setMessages(updatedWithAi);
+          persistMessages(updatedWithAi);
+          remoteSuccess = true;
         }
-      } catch {
-        // fallback to offline
+      } catch (err) {
+        console.warn("Backend AI endpoint unreachable, switching to grounded contextual mentor engine.", err);
       }
     }
 
-    try {
-      if (targetConvId && !targetConvId.startsWith("conv-")) {
-        const { data } = await messagesApi.send(targetConvId, text);
+    if (!remoteSuccess) {
+      // Use grounded learning-oriented mentor engine
+      setTimeout(() => {
+        const tutorResult = generateContextualTutorResponse(
+          text,
+          activeTopic,
+          activePath,
+          skillCompetencies
+        );
+
         const aiMsg: MessageItem = {
-          id: data.messageId,
+          id: `ai-${Date.now()}`,
           role: "AI",
-          content: data.message,
+          content: tutorResult.content,
           createdAt: new Date().toISOString(),
+          topicTag: activeTopic,
+          codeSnippet: tutorResult.codeSnippet,
         };
+
         const updatedWithAi = [...updatedWithUser, aiMsg];
         setMessages(updatedWithAi);
-        saveMessagesLocally(updatedWithAi);
+        persistMessages(updatedWithAi);
         setIsSending(false);
-        return;
-      }
-    } catch (e) {
-      console.warn("Message send remote call failed, using intelligent offline tutor", e);
+      }, 600);
+    } else {
+      setIsSending(false);
+    }
+  };
+
+  // ─── 6. Action Handlers on AI Messages ────────────────────────────────────────
+
+  const handleCopyMessage = (msgId: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMessageId(msgId);
+    setTimeout(() => setCopiedMessageId(null), 2000);
+  };
+
+  const handleMarkMilestoneUnderstood = (topicTitle: string) => {
+    if (!activePath) return;
+
+    // Check off the topic in local completed topics
+    const storageKey = `completed_topics_${activePath.id}`;
+    const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
+
+    // Find topicId from activePath roadmap
+    const allTopics = activePath.roadmap?.phases?.flatMap((p) => p.topics) || [];
+    const matched = allTopics.find((t) => t.title.toLowerCase().includes(topicTitle.toLowerCase())) || allTopics[0];
+
+    const topicId = matched?.topicId || `topic-${Date.now()}`;
+    if (!existing.includes(topicId)) {
+      const updated = [...existing, topicId];
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+      dispatchProgressUpdate({ action: "mark_understood", pathId: activePath.id, topicId });
     }
 
-    // Intelligent Offline Tutor response engine
-    setTimeout(() => {
-      let aiResponseContent = "";
-      const lower = text.toLowerCase();
-
-      if (lower.includes("code") || lower.includes("example")) {
-        aiResponseContent =
-          `Here is a production-ready example for **${activeTopic}**:\n\n` +
-          "```tsx\n" +
-          "import React, { useState, useEffect, useMemo } from 'react';\n\n" +
-          "interface DataItem {\n" +
-          "  id: string;\n" +
-          "  title: string;\n" +
-          "  active: boolean;\n" +
-          "}\n\n" +
-          "export function TopicMasteryComponent({ topic }: { topic: string }) {\n" +
-          "  const [items, setItems] = useState<DataItem[]>([]);\n" +
-          "  const [loading, setLoading] = useState(true);\n\n" +
-          "  // Memoized filter for performance optimization\n" +
-          "  const activeItems = useMemo(() => {\n" +
-          "    return items.filter((item) => item.active);\n" +
-          "  }, [items]);\n\n" +
-          "  return (\n" +
-          "    <div className='p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'>\n" +
-          "      <h3 className='font-bold text-lg'>{topic}</h3>\n" +
-          "      <p className='text-sm text-zinc-600 dark:text-zinc-400'>Active items: {activeItems.length}</p>\n" +
-          "    </div>\n" +
-          "  );\n" +
-          "}\n" +
-          "```\n\n" +
-          "**Key Architectural Highlights:**\n" +
-          "- Uses `useMemo` to prevent redundant recalculations on renders.\n" +
-          "- Fully typed with strict TypeScript interfaces.\n" +
-          "- Modular component structure aligned with clean code standards.";
-      } else if (lower.includes("project") || lower.includes("mini")) {
-        aiResponseContent =
-          `🛠️ **Hands-on Capstone Challenge for ${activeTopic}:**\n\n` +
-          "**Project Title:** Interactive Metric Tracker with Local Persistence\n\n" +
-          "**Requirements:**\n" +
-          "1. Build a multi-step checklist where state updates trigger optimistic UI changes.\n" +
-          "2. Store user progress in `localStorage` and handle edge cases when storage is full.\n" +
-          "3. Add a debounced search filter with real-time feedback.\n\n" +
-          "**Expected Learning Outcome:**\n" +
-          "Deep mastery of state management, custom hook encapsulation, and DOM performance.";
-      } else if (lower.includes("interview") || lower.includes("question")) {
-        aiResponseContent =
-          `🎯 **Top 3 Interview Questions for ${activeTopic}:**\n\n` +
-          "1. **How does the Virtual DOM diffing algorithm work, and why are keys important?**\n" +
-          "   *Tip:* Explain heuristic O(n) diffing, fiber reconciliation, and avoiding array index keys.\n\n" +
-          "2. **What is the difference between microtasks and macrotasks in the event loop?**\n" +
-          "   *Tip:* Mention `Promise.then` vs `setTimeout` execution order.\n\n" +
-          "3. **How do you prevent unnecessary re-renders in deep React component trees?**\n" +
-          "   *Tip:* Compare `React.memo`, `useCallback`, `useMemo`, and state colocation.";
-      } else {
-        aiResponseContent =
-          `Regarding **"${text}"** in the context of **${activeTopic}**:\n\n` +
-          `1. **Core Principle:** In modern full-stack architectures, focus on separation of concerns and clear data flow contracts.\n` +
-          `2. **Best Practice:** Keep state as close as possible to where it is used (state colocation), and avoid premature abstraction.\n` +
-          `3. **Next Step:** Check off the corresponding milestone on your **Roadmap** and verify the verified competency in the **Skills** tab!`;
-      }
-
-      const aiMsg: MessageItem = {
-        id: `ai-${Date.now()}`,
-        role: "AI",
-        content: aiResponseContent,
-        createdAt: new Date().toISOString(),
-        topicTag: activeTopic,
-      };
-
-      const finalMsgs = [...updatedWithUser, aiMsg];
-      setMessages(finalMsgs);
-      saveMessagesLocally(finalMsgs);
-      setIsSending(false);
-    }, 700);
+    // Add confirmation message
+    const confirmMsg: MessageItem = {
+      id: `ai-${Date.now()}`,
+      role: "AI",
+      content: `🎉 **Milestone Verified!**\n\nI have updated your roadmap progress for **${activePath.title}**. You can view your refreshed competency matrix in the **Skills** tab or continue to your next milestone!`,
+      createdAt: new Date().toISOString(),
+      isVerified: true,
+    };
+    const updated = [...messages, confirmMsg];
+    setMessages(updated);
+    persistMessages(updated);
   };
 
   const handleClearChat = () => {
-    if (!window.confirm("Clear current conversation history?")) return;
+    if (!window.confirm("Clear conversation history for this session?")) return;
     const initialMsg: MessageItem = {
+      id: `init-${Date.now()}`,
       role: "AI",
-      content: `Chat cleared. What topic or concept would you like to explore?`,
+      content: `### 🔄 Session Cleared\n\nWhat concept or engineering topic would you like to explore for **${activeTopic}**?`,
       createdAt: new Date().toISOString(),
+      topicTag: activeTopic,
     };
     setMessages([initialMsg]);
-    saveMessagesLocally([initialMsg]);
+    persistMessages([initialMsg]);
   };
 
+  const handleNewSession = async () => {
+    const newId = `session-${Date.now()}`;
+    const newSession: ChatSession = {
+      id: newId,
+      title: `${activeTopic} Deep Dive`,
+      topicTag: activePath?.category || "Engineering",
+      lastMessage: "New mentorship session started.",
+      updatedAt: new Date().toISOString(),
+      pathId: activePath?.id,
+    };
+
+    const updatedSessions = [newSession, ...sessions];
+    setSessions(updatedSessions);
+    localStorage.setItem("pathai_chat_sessions", JSON.stringify(updatedSessions));
+
+    setConversationId(newId);
+    const initialMsg: MessageItem = {
+      id: `init-${Date.now()}`,
+      role: "AI",
+      content: `### 🎯 New Session: ${activeTopic}\n\nI'm ready to assist with code examples, mock interviews, or architectural evaluations. How would you like to start?`,
+      createdAt: new Date().toISOString(),
+      topicTag: activeTopic,
+    };
+    setMessages([initialMsg]);
+    persistMessages([initialMsg], newId);
+    setHistoryOpen(false);
+  };
+
+  const handleSelectSession = (session: ChatSession) => {
+    setConversationId(session.id);
+    if (session.pathId) {
+      const match = allPaths.find((p) => p.id === session.pathId);
+      if (match) {
+        setActivePath(match);
+        setActiveTopic(match.currentMilestone || session.title);
+      }
+    }
+    setHistoryOpen(false);
+  };
+
+  const handleDeleteSession = (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation();
+    if (!window.confirm("Delete this mentorship session?")) return;
+    const filtered = sessions.filter((s) => s.id !== sessionId);
+    setSessions(filtered);
+    localStorage.setItem("pathai_chat_sessions", JSON.stringify(filtered));
+    localStorage.removeItem(`messages_${sessionId}`);
+    if (conversationId === sessionId) {
+      if (filtered.length > 0) {
+        handleSelectSession(filtered[0]);
+      } else {
+        handleNewSession();
+      }
+    }
+  };
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
+
   return (
-    <div className="max-w-4xl mx-auto flex flex-col h-[calc(100vh-140px)] min-h-[620px] gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-zinc-200/60 dark:border-zinc-800/60 flex-wrap gap-2">
-        <div className="flex items-center gap-3">
-          <div className="size-10 rounded-xl bg-[#2b7fff]/10 text-[#2b7fff] flex items-center justify-center">
-            <Sparkles className="size-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-bold text-lg leading-6">PathAI Tutor</h1>
-              <Badge className="bg-[#2b7fff]/10 text-[#2b7fff] border-0 text-[10px] px-2 py-0">
-                {activeTopic}
-              </Badge>
-            </div>
-            <p className="text-xs text-[#71717b]">
-              Grounded in your personalized learning roadmap
-            </p>
-          </div>
-        </div>
+    <div className="max-w-5xl mx-auto flex flex-col h-[calc(100vh-130px)] min-h-[640px] gap-3.5 relative pb-2">
+      {/* ─── 1. Context-Aware Header ────────────────────────────────────────── */}
+      <TutorContextHeader
+        activePath={activePath}
+        allPaths={allPaths}
+        currentMilestone={activeTopic}
+        onSelectPath={(path) => {
+          setActivePath(path);
+          setActiveTopic(path.currentMilestone || path.title);
+        }}
+        onClearChat={handleClearChat}
+        onToggleHistory={() => setHistoryOpen(!historyOpen)}
+        historyOpen={historyOpen}
+      />
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearChat}
-            className="h-8 text-xs text-zinc-400 dark:text-zinc-500 hover:text-red-600 gap-1.5 rounded-lg"
+      {/* ─── 2. Sessions History Drawer (Collapsible) ────────────────────────── */}
+      <AnimatePresence>
+        {historyOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ duration: 0.2 }}
+            className="absolute right-0 top-20 bottom-4 z-40"
           >
-            <Trash2 className="size-3.5" />
-            Clear
-          </Button>
+            <TutorSessionsSidebar
+              sessions={sessions}
+              activeSessionId={conversationId}
+              onSelectSession={handleSelectSession}
+              onNewSession={handleNewSession}
+              onDeleteSession={handleDeleteSession}
+              onClose={() => setHistoryOpen(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          <Badge
-            variant="secondary"
-            className="bg-emerald-50 text-emerald-700 text-xs px-2.5 py-1"
-          >
-            <span className="size-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse inline-block" />
-            Online & Ready
-          </Badge>
-        </div>
-      </div>
-
-      {/* Messages Container */}
-      <Card className="flex-1 p-6 overflow-y-auto backdrop-blur-xl bg-white/75 border-zinc-200/60 dark:border-zinc-800/60 shadow-xl shadow-[#2b7fff]/5 flex flex-col gap-4">
+      {/* ─── 3. Main Chat Container ─────────────────────────────────────────── */}
+      <Card className="flex-1 p-4 sm:p-6 overflow-y-auto glass-card border border-zinc-200/80 shadow-lg shadow-[#2b7fff]/5 flex flex-col gap-5 rounded-3xl bg-white/80">
         {isLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3">
             <Loader2 className="size-8 text-[#2b7fff] animate-spin" />
-            <p className="text-sm text-[#71717b]">Loading conversation...</p>
+            <p className="text-xs sm:text-sm text-zinc-500 font-medium">Connecting to your learning context...</p>
           </div>
         ) : (
           messages.map((msg, index) => {
             const isUser = msg.role === "HUMAN";
+            const msgId = msg.id || `msg-${index}`;
+
             return (
-              <div
-                key={index}
-                className={`flex gap-3 items-start ${
-                  isUser ? "flex-row-reverse" : "flex-row"
-                }`}
+              <motion.div
+                key={msgId}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className={`flex gap-3 sm:gap-3.5 items-start ${isUser ? "flex-row-reverse" : "flex-row"}`}
               >
                 {/* Avatar */}
                 <div
-                  className={`size-8 rounded-xl shrink-0 flex items-center justify-center text-xs font-semibold ${
+                  className={`size-8 sm:size-9 rounded-2xl shrink-0 flex items-center justify-center text-xs font-semibold ${
                     isUser
-                      ? "bg-[#2b7fff] text-white shadow-md shadow-[#2b7fff]/20"
-                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800"
+                      ? "bg-gradient-to-tr from-[#2563eb] to-[#2b7fff] text-white shadow-md shadow-[#2b7fff]/25"
+                      : "bg-white border border-zinc-200/90 text-[#2b7fff] shadow-sm"
                   }`}
                 >
-                  {isUser ? <UserIcon className="size-4" /> : <Bot className="size-4 text-[#2b7fff]" />}
+                  {isUser ? <UserIcon className="size-4" /> : <Bot className="size-4.5" />}
                 </div>
 
-                {/* Bubble */}
+                {/* Message Content Bubble */}
                 <div
-                  className={`p-4 rounded-2xl max-w-[85%] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
-                    isUser
-                      ? "bg-[#2b7fff] text-white rounded-tr-none shadow-md shadow-[#2b7fff]/15"
-                      : "bg-white dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800/70 text-zinc-900 dark:text-zinc-50 rounded-tl-none shadow-sm font-sans"
+                  className={`flex flex-col gap-2 max-w-[92%] sm:max-w-[84%] ${
+                    isUser ? "items-end" : "items-start"
                   }`}
                 >
-                  {msg.content}
+                  <div
+                    className={`p-4 sm:p-5 rounded-3xl text-xs sm:text-sm leading-relaxed ${
+                      isUser
+                        ? "bg-[#2b7fff] text-white rounded-tr-none shadow-md shadow-[#2b7fff]/15"
+                        : "bg-white/95 border border-zinc-200/80 text-zinc-950 rounded-tl-none shadow-sm font-sans"
+                    }`}
+                  >
+                    {isUser ? (
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    ) : (
+                      <MarkdownRenderer content={msg.content} />
+                    )}
+                  </div>
+
+                  {/* Actions Inside AI Response */}
+                  {!isUser && (
+                    <div className="flex items-center gap-1.5 flex-wrap pl-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopyMessage(msgId, msg.content)}
+                        className="h-6 px-2 text-[11px] text-zinc-500 hover:text-zinc-900 rounded-lg gap-1 cursor-pointer"
+                      >
+                        {copiedMessageId === msgId ? (
+                          <>
+                            <Check className="size-3 text-emerald-600" />
+                            <span className="text-emerald-600 font-semibold">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="size-3" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleMarkMilestoneUnderstood(activeTopic)}
+                        className="h-6 px-2 text-[11px] text-emerald-700 hover:bg-emerald-50 rounded-lg gap-1 cursor-pointer font-medium"
+                      >
+                        <CheckCircle2 className="size-3 text-emerald-600" />
+                        <span>Mark Understood</span>
+                      </Button>
+
+                      {activePath && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/conversations/${activePath.id}/roadmap`)}
+                          className="h-6 px-2 text-[11px] text-[#2b7fff] hover:bg-blue-50 rounded-lg gap-1 cursor-pointer font-medium"
+                        >
+                          <Route className="size-3" />
+                          <span>View in Roadmap</span>
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSendMessage(`Can you give me another example and practice challenge for "${activeTopic}"?`)}
+                        className="h-6 px-2 text-[11px] text-zinc-500 hover:text-zinc-900 rounded-lg gap-1 cursor-pointer"
+                      >
+                        <RefreshCw className="size-3" />
+                        <span>Ask Follow-up</span>
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              </div>
+              </motion.div>
             );
           })
         )}
 
+        {/* Typing / Formulating Indicator */}
         {isSending && (
-          <div className="flex gap-3 items-start">
-            <div className="size-8 rounded-xl shrink-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center">
-              <Bot className="size-4 text-[#2b7fff]" />
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex gap-3 items-start"
+          >
+            <div className="size-8 rounded-2xl shrink-0 bg-white border border-zinc-200 text-[#2b7fff] flex items-center justify-center shadow-sm">
+              <Bot className="size-4.5" />
             </div>
-            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800/70 rounded-tl-none shadow-sm flex items-center gap-2 text-xs text-[#71717b]">
-              <Loader2 className="size-3.5 text-[#2b7fff] animate-spin" />
-              PathAI is formulating response...
+
+            <div className="p-4 rounded-2xl bg-white border border-zinc-200/80 rounded-tl-none shadow-sm flex items-center gap-2.5 text-xs text-zinc-600">
+              <span className="flex gap-1 items-center">
+                <span className="size-1.5 rounded-full bg-[#2b7fff] animate-bounce" />
+                <span className="size-1.5 rounded-full bg-[#2b7fff] animate-bounce [animation-delay:0.2s]" />
+                <span className="size-1.5 rounded-full bg-[#2b7fff] animate-bounce [animation-delay:0.4s]" />
+              </span>
+              <span className="font-medium text-zinc-700">PathAI is formulating learning blueprint...</span>
             </div>
-          </div>
+          </motion.div>
         )}
+
         <div ref={messagesEndRef} />
       </Card>
 
-      {/* Quick Action Prompt Chips */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        {quickPrompts.map((qp) => {
-          const Icon = qp.icon;
+      {/* ─── 4. Contextual Quick Action Chips ──────────────────────────────── */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 select-none">
+        {contextualActionChips.map((chip, idx) => {
+          const Icon = chip.icon;
           return (
             <button
-              key={qp.label}
+              key={idx}
               type="button"
-              onClick={() => handleSendMessage(qp.prompt)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white/90 hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:border-[#2b7fff]/40 text-xs font-semibold text-zinc-700 dark:text-zinc-300 shadow-sm transition-all cursor-pointer whitespace-nowrap"
+              onClick={() => handleSendMessage(chip.prompt)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-zinc-200/80 bg-white hover:bg-zinc-50 hover:border-[#2b7fff]/40 text-xs font-semibold text-zinc-700 shadow-sm transition-all cursor-pointer whitespace-nowrap hover:scale-[1.02] active:scale-[0.98]"
             >
-              <Icon className="size-3 text-[#2b7fff]" />
-              {qp.label}
+              <Icon className="size-3.5 text-[#2b7fff]" />
+              {chip.label}
             </button>
           );
         })}
       </div>
 
-      {/* Input Box */}
-      <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex gap-2">
-        <input
-          type="text"
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          placeholder={`Ask anything about ${activeTopic} or request coding assistance...`}
-          className="flex-1 h-12 px-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/95 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] shadow-sm transition-all"
-        />
+      {/* ─── 5. Message Input Form ─────────────────────────────────────────── */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSendMessage();
+        }}
+        className="flex gap-2.5 items-center"
+      >
+        <div className="relative flex-1">
+          <input
+            type="text"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            placeholder={`Ask a question on "${activeTopic}", request code, or type "What should I learn next?"...`}
+            className="w-full h-12 pl-4 pr-10 rounded-2xl border border-zinc-200/80 bg-white/95 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] shadow-sm transition-all text-zinc-950 placeholder:text-zinc-400"
+          />
+        </div>
+
         <Button
           type="submit"
           disabled={!inputMessage.trim() || isSending}
-          className="h-12 px-5 bg-[#2b7fff] text-white hover:bg-[#2563eb] rounded-xl font-semibold gap-2 shadow-lg shadow-[#2b7fff]/20 cursor-pointer"
+          className="h-12 px-6 bg-[#2b7fff] text-white hover:bg-[#2563eb] rounded-2xl font-bold text-xs sm:text-sm gap-2 shadow-lg shadow-[#2b7fff]/25 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
         >
-          <Send className="size-4" />
-          Send
+          {isSending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <>
+              <Send className="size-4" />
+              <span className="hidden sm:inline">Send</span>
+            </>
+          )}
         </Button>
       </form>
     </div>

@@ -157,15 +157,15 @@ export default function RecommendationsPage() {
       </div>
 
       {/* Weekly Schedule Plan */}
-      <Card className="backdrop-blur-xl bg-white/70 border-zinc-200/60 dark:border-zinc-800/60 shadow-xl shadow-[#2b7fff]/5 p-6 flex flex-col gap-4">
+      <Card className="backdrop-blur-xl bg-white/70 border-zinc-200/60 shadow-xl shadow-[#2b7fff]/5 p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar className="size-5 text-[#2b7fff]" />
-            <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-50">
+            <h3 className="font-bold text-base text-zinc-900">
               Recommended Weekly Study Timetable
             </h3>
           </div>
-          <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-500">
+          <span className="text-xs font-semibold text-zinc-500">
             Target: 12 Hours / Week
           </span>
         </div>
@@ -177,17 +177,17 @@ export default function RecommendationsPage() {
               className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition-all ${
                 item.done
                   ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
-                  : "bg-white dark:bg-zinc-950 border-zinc-200/80 dark:border-zinc-800/80 hover:border-zinc-300"
+                  : "bg-white border-zinc-200/80 hover:border-zinc-300"
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="font-bold text-xs uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+                <span className="font-bold text-xs uppercase tracking-wider text-zinc-600">
                   {item.day}
                 </span>
                 {item.done ? (
                   <CheckCircle2 className="size-3.5 text-emerald-600" />
                 ) : (
-                  <Clock className="size-3.5 text-zinc-400 dark:text-zinc-500" />
+                  <Clock className="size-3.5 text-zinc-400" />
                 )}
               </div>
               <p className="text-xs font-medium line-clamp-2 leading-relaxed">
@@ -202,15 +202,15 @@ export default function RecommendationsPage() {
       </Card>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-zinc-100/80 dark:bg-zinc-800/80 rounded-xl w-full sm:w-auto overflow-x-auto self-start">
+      <div className="flex items-center gap-1.5 p-1 bg-zinc-100/80 rounded-xl w-full sm:w-auto overflow-x-auto self-start">
         {types.map((type) => (
           <button
             key={type}
             onClick={() => setSelectedType(type)}
             className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all border-0 cursor-pointer ${
               selectedType === type
-                ? "bg-white dark:bg-zinc-950 text-[#2b7fff] shadow-sm"
-                : "text-[#71717b] hover:text-zinc-900 dark:hover:text-zinc-50 bg-transparent"
+                ? "bg-white text-[#2b7fff] shadow-sm"
+                : "text-[#71717b] hover:text-zinc-900 bg-transparent"
             }`}
           >
             {type}
@@ -225,13 +225,13 @@ export default function RecommendationsPage() {
           return (
             <Card
               key={res.id}
-              className="backdrop-blur-xl bg-white/70 hover:bg-white dark:hover:bg-zinc-950 border-zinc-200/60 dark:border-zinc-800/60 hover:shadow-xl hover:shadow-[#2b7fff]/5 hover:border-[#2b7fff]/30 transition-all duration-300 flex flex-col justify-between"
+              className="backdrop-blur-xl bg-white/70 hover:bg-white border-zinc-200/60 hover:shadow-xl hover:shadow-[#2b7fff]/5 hover:border-[#2b7fff]/30 transition-all duration-300 flex flex-col justify-between"
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <Badge
                     variant="outline"
-                    className="text-[10px] uppercase font-semibold text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 flex items-center gap-1"
+                    className="text-[10px] uppercase font-semibold text-zinc-600 bg-zinc-50 flex items-center gap-1"
                   >
                     {res.type === "Video" && <Video className="size-3 text-red-500" />}
                     {res.type === "Documentation" && <BookOpen className="size-3 text-blue-500" />}
@@ -246,14 +246,14 @@ export default function RecommendationsPage() {
                     className={`p-1.5 rounded-lg border-0 bg-transparent cursor-pointer transition-colors ${
                       isBookmarked
                         ? "text-[#2b7fff]"
-                        : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                        : "text-zinc-400 hover:text-zinc-700"
                     }`}
                   >
                     <Bookmark className="size-4" fill={isBookmarked ? "currentColor" : "none"} />
                   </button>
                 </div>
 
-                <CardTitle className="text-base font-bold text-zinc-900 dark:text-zinc-50 leading-snug mt-1 line-clamp-2">
+                <CardTitle className="text-base font-bold text-zinc-900 leading-snug mt-1 line-clamp-2">
                   {res.title}
                 </CardTitle>
                 <CardDescription className="text-xs line-clamp-3 leading-relaxed mt-1">
@@ -267,7 +267,7 @@ export default function RecommendationsPage() {
                     <Badge
                       key={tag}
                       variant="secondary"
-                      className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] px-2 py-0.5"
+                      className="bg-zinc-100 text-zinc-700 text-[10px] px-2 py-0.5"
                     >
                       {tag}
                     </Badge>
@@ -276,11 +276,11 @@ export default function RecommendationsPage() {
 
                 <div className="flex items-center justify-between text-[11px] text-[#71717b]">
                   <span>{res.provider}</span>
-                  <span className="font-semibold text-zinc-600 dark:text-zinc-400">{res.estimatedTime}</span>
+                  <span className="font-semibold text-zinc-600">{res.estimatedTime}</span>
                 </div>
               </CardContent>
 
-              <CardFooter className="pt-3 border-t border-zinc-100 dark:border-zinc-900">
+              <CardFooter className="pt-3 border-t border-zinc-100">
                 <a
                   href={res.url}
                   target="_blank"

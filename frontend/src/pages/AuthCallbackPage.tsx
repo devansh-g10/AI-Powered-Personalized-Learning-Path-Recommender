@@ -34,7 +34,7 @@ export default function AuthCallbackPage() {
   }, [handleGoogleCallback, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
+    <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="flex flex-col items-center gap-6">
         <div className="flex items-center gap-2">
           <div className="size-10 shadow-lg shadow-[#2b7fff]/30 rounded-xl bg-[#2b7fff] text-blue-50 flex justify-center items-center">
