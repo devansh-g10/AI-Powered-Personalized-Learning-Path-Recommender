@@ -117,14 +117,10 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <div className="relative bg-white text-zinc-950 w-full min-h-screen overflow-x-hidden flex flex-col">
+    <div className="relative bg-white text-zinc-950 w-full min-h-screen flex flex-col">
       {/* Background ambient gradient glows across full width */}
-      <img
-        src="https://images.unsplash.com/photo-1557683316-973673baf926?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3ODc2NDd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGJsdWUlMjB2aW9sZXQlMjBncmFkaWVudCUyMHNvZnQlMjBnbG93fGVufDF8MHx8fDE3ODcwMzk1NTB8MA&ixlib=rb-4.1.0&q=80&w=400"
-        alt=""
-        className="pointer-events-none object-cover blur-3xl opacity-25 rounded-full absolute -right-24 -top-32 w-[650px] h-[650px]"
-      />
-      <div className="pointer-events-none blur-3xl bg-[radial-gradient(circle,oklch(0.623_0.214_259.815)_0%,transparent_70%)] opacity-15 rounded-full absolute -left-32 bottom-0 w-[700px] h-[700px]" />
+      <div className="pointer-events-none absolute -right-24 -top-32 w-[650px] h-[650px] bg-gradient-to-bl from-blue-400/15 via-indigo-300/10 to-transparent blur-[140px] rounded-full" />
+      <div className="pointer-events-none blur-[140px] bg-gradient-to-tr from-[#2b7fff]/15 to-transparent rounded-full absolute -left-32 bottom-0 w-[700px] h-[700px]" />
 
       {/* ─── Full-Width Header Bar ───────────────────────────────────────── */}
       <motion.header
@@ -323,8 +319,8 @@ export default function AppLayout() {
         )}
       </AnimatePresence>
 
-      {/* ─── Full-Width Main Viewport Container ──────────────────────────── */}
-      <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8">
+      {/* ─── Main Viewport Container ──────────────────────────── */}
+      <main className={`flex-1 w-full ${isActive("/landing") || location.pathname === "/" ? "max-w-none px-0 py-0" : "max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8"}`}>
         <Outlet />
       </main>
 

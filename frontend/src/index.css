@@ -3,6 +3,27 @@
 @import "./tw-animate.css";
 
 /* Fluid full height standards */
+html {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
 .min-h-screen {
   min-height: 100vh;
 }
@@ -31,6 +52,9 @@
 }
 
 body {
+  overflow-x: hidden;
+  width: 100%;
+  min-height: 100%;
   font-size: 16px;
   line-height: 24px;
   letter-spacing: -0.01em;
@@ -39,6 +63,13 @@ body {
   font-family: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 :root {
@@ -96,6 +127,23 @@ h1, h2, h3, .font-heading {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(228, 231, 236, 0.7);
+}
+
+/* ─── Background Patterns ─────────────────────────────────────────────────── */
+.bg-dot-pattern {
+  background-size: 24px 24px;
+  background-image: radial-gradient(rgba(43, 127, 255, 0.1) 1.2px, transparent 1.2px);
+}
+
+.bg-grid-pattern {
+  background-size: 36px 36px;
+  background-image: 
+    linear-gradient(to right, rgba(43, 127, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(43, 127, 255, 0.04) 1px, transparent 1px);
+}
+
+.glow-mesh {
+  background: radial-gradient(circle at 50% 0%, rgba(43, 127, 255, 0.15) 0%, rgba(99, 102, 241, 0.08) 35%, transparent 70%);
 }
 
 /* ─── Keyframe Animations ─────────────────────────────────────────────────── */
