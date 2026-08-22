@@ -11,13 +11,11 @@ import {
   Compass,
   Award,
   BookOpen,
-  CheckCircle2,
   ChevronRight,
   ChevronDown,
   ShieldCheck,
   Terminal,
   Check,
-  Flame,
   Star,
   Zap,
   HelpCircle,
@@ -174,33 +172,6 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
   };
 
   const currentTrack = trackTabs[activeTab];
-
-  const features = [
-    {
-      icon: Route,
-      title: "Self-Adapting Curriculums",
-      tagline: "Dynamic Milestone Tree",
-      desc: "Never get lost in generic 50-hour video playlists. PathAI maps an interconnected learning sequence calibrated to what you already know.",
-    },
-    {
-      icon: Bot,
-      title: "AI Learning Mentor",
-      tagline: "Contextual Q&A Assistant",
-      desc: "Ask deep-dive questions on any concept. Receive clean TypeScript code snippets, mock interview questions, and practical mini-projects.",
-    },
-    {
-      icon: Award,
-      title: "Verified Skill Competency",
-      tagline: "Live Progress Matrix",
-      desc: "Check off milestones to level up your competency radar across Frontend, Backend, DevOps, and System Design with quantifiable metrics.",
-    },
-    {
-      icon: BookOpen,
-      title: "Curated Resource Engine",
-      tagline: "Multi-Format Library",
-      desc: "Skip outdated tutorials. Access verified YouTube masterclasses, official docs, and GitHub production starters matched to your active stage.",
-    },
-  ];
 
   const faqs = [
     {
@@ -1087,44 +1058,26 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
             <span>START YOUR JOURNEY</span>
           </motion.div>
 
-          {/* Staggered Heading Reveal (word-by-word) */}
+          {/* Staggered Heading Reveal */}
           <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-40px" }}
-            variants={{
-              visible: {
-                transition: {
-                  staggerChildren: reduced ? 0 : 0.07,
-                },
-              },
-            }}
-            className="flex flex-col gap-4 max-w-3xl mx-auto relative z-10"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: easeOut }}
+            className="flex flex-col gap-4 max-w-3xl mx-auto relative z-10 text-center"
           >
-            <h2 className="font-display text-[clamp(2.4rem,5vw,4.2rem)] font-bold leading-[1.08] tracking-[-0.04em] text-zinc-950">
-              {["Build", "a", "Learning", "Path", "That"].map((word, i) => (
-                <motion.span
-                  key={i}
-                  variants={{
-                    hidden: { opacity: 0, y: 16 },
-                    visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: easeOut } },
-                  }}
-                  className="inline-block mr-[0.25em]"
-                >
-                  {word}
-                </motion.span>
-              ))}
-              <motion.span
-                variants={{
-                  hidden: { opacity: 0, y: 16 },
-                  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: easeOut } },
-                }}
-                className="inline-block bg-gradient-to-r from-[#2b7fff] via-indigo-600 to-purple-600 bg-clip-text text-transparent"
-              >
-                Fits You.
-              </motion.span>
+            <h2
+              className="text-[clamp(2.4rem,5vw,4.2rem)] font-bold leading-[1.12] tracking-[-0.03em] pb-1"
+              style={{
+                backgroundImage: "linear-gradient(135deg, #2b7fff 0%, #4f46e5 50%, #9333ea 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                color: "transparent",
+                display: "inline-block",
+              }}
+            >
+              Build a Learning Path <br className="hidden sm:inline" /> That Fits You.
             </h2>
-
           </motion.div>
 
           {/* ─── Interactive Learning Path Journey (Goal → Roadmap → Practice → Skills) ─── */}
