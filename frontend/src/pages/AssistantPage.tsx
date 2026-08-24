@@ -691,18 +691,26 @@ export default function AssistantPage() {
           </div>
         </div>
 
-        {/* ─── 3. Floating Bottom Composer (Clean Light Pill Pattern) ───── */}
-        <div className="px-4 sm:px-8 pb-3 pt-1 bg-gradient-to-t from-slate-50/90 via-slate-50/50 to-transparent shrink-0 relative z-20">
-          <div className="max-w-3xl mx-auto flex flex-col items-center gap-2">
-            {/* Light Pill Composer */}
-            <div className="w-full bg-white/95 backdrop-blur-xl rounded-3xl border border-zinc-200/90 p-3 px-4 shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col gap-1.5 focus-within:border-[#2b7fff] focus-within:ring-4 focus-within:ring-[#2b7fff]/10 transition-all">
+        {/* ─── 3. Floating Bottom Composer (Enlarged & Animated Glass Pattern) ───── */}
+        <div className="px-4 sm:px-8 pb-5 pt-2 bg-gradient-to-t from-white via-white/80 to-transparent shrink-0 relative z-20">
+          <div className="max-w-4xl mx-auto flex flex-col items-center gap-2">
+            {/* Enlarged Animated Glass Pill Composer */}
+            <motion.div
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="group relative w-full bg-white/95 backdrop-blur-2xl rounded-[28px] border-2 border-zinc-200/90 p-4 sm:p-5 px-5 sm:px-6 shadow-[0_10px_35px_rgba(0,0,0,0.06)] hover:shadow-[0_16px_45px_rgba(43,127,255,0.12)] focus-within:border-[#2b7fff] focus-within:ring-4 focus-within:ring-[#2b7fff]/12 transition-all duration-300 flex flex-col gap-2.5"
+            >
+              {/* Subtle ambient gradient shimmer glow */}
+              <div className="pointer-events-none absolute -inset-0.5 rounded-[30px] bg-gradient-to-r from-blue-500/10 via-sky-400/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 blur-xs transition-opacity duration-500" />
+
               {/* Auto-expanding Input Area */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleSendMessage();
                 }}
-                className="flex flex-col gap-1"
+                className="flex flex-col gap-2 relative z-10"
               >
                 <textarea
                   ref={textareaRef}
@@ -711,7 +719,7 @@ export default function AssistantPage() {
                   onChange={(e) => {
                     setInputMessage(e.target.value);
                     e.target.style.height = "auto";
-                    e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 180)}px`;
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -720,46 +728,59 @@ export default function AssistantPage() {
                     }
                   }}
                   placeholder="Ask anything..."
-                  className="w-full bg-transparent text-sm text-zinc-900 placeholder:text-zinc-400 outline-none resize-none max-h-36 leading-relaxed border-0 font-sans"
+                  className="w-full bg-transparent text-sm sm:text-base text-zinc-900 placeholder:text-zinc-400 outline-none resize-none min-h-[38px] max-h-44 leading-relaxed border-0 font-sans tracking-tight"
                 />
 
-                {/* Bottom Controls Row */}
+                {/* Bottom Controls Row (Borderless Clean) */}
                 <div className="flex items-center justify-between pt-1">
                   {/* Left Attachment / Mode buttons */}
-                  <div className="flex items-center gap-1.5">
-                    <button
+                  <div className="flex items-center gap-2">
+                    <motion.button
                       type="button"
                       title="Add code snippet"
+                      whileHover={{ rotate: 90, scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
                       onClick={() => {
                         setInputMessage((prev) =>
                           prev ? `${prev}\n\n\`\`\`typescript\n// Paste code here\n\`\`\`` : "```typescript\n// Paste code here\n```"
                         );
                         textareaRef.current?.focus();
                       }}
-                      className="size-7 rounded-full bg-zinc-50 hover:bg-zinc-100 text-zinc-700 flex items-center justify-center transition-colors cursor-pointer border border-zinc-200 shadow-2xs"
+                      className="size-8 rounded-full bg-blue-50/80 hover:bg-blue-100 text-[#2b7fff] flex items-center justify-center transition-colors cursor-pointer border border-blue-200/80 shadow-2xs"
                     >
-                      <Plus className="size-4" />
-                    </button>
+                      <Plus className="size-4 stroke-[2.5]" />
+                    </motion.button>
 
-                    {/* Mode Pills */}
-                    <div className="flex items-center gap-1">
+                    {/* Animated Sliding Mode Pills */}
+                    <div className="flex items-center bg-zinc-100/80 p-1 rounded-2xl border border-zinc-200/60">
                       {[
                         { id: "general", label: "Chat" },
                         { id: "code", label: "Code" },
                         { id: "deep", label: "Deep Dive" },
-                      ].map((mode) => (
-                        <button
-                          key={mode.id}
-                          type="button"
-                          onClick={() => setSelectedMode(mode.id as typeof selectedMode)}
-                          className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors cursor-pointer border-0 ${selectedMode === mode.id
-                            ? "bg-[#2b7fff] text-white font-bold shadow-xs"
-                            : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 bg-transparent"
+                      ].map((mode) => {
+                        const isSelected = selectedMode === mode.id;
+                        return (
+                          <button
+                            key={mode.id}
+                            type="button"
+                            onClick={() => setSelectedMode(mode.id as typeof selectedMode)}
+                            className={`relative px-3.5 py-1 rounded-xl text-xs font-semibold transition-colors cursor-pointer border-0 z-10 ${
+                              isSelected
+                                ? "text-white"
+                                : "text-zinc-600 hover:text-zinc-950"
                             }`}
-                        >
-                          {mode.label}
-                        </button>
-                      ))}
+                          >
+                            {isSelected && (
+                              <motion.div
+                                layoutId="activeComposerMode"
+                                className="absolute inset-0 bg-[#2b7fff] rounded-xl shadow-xs"
+                                transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                              />
+                            )}
+                            <span className="relative z-10">{mode.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -767,21 +788,21 @@ export default function AssistantPage() {
                   <div className="flex items-center gap-2">
                     <motion.button
                       type="submit"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: 1.08 }}
+                      whileTap={{ scale: 0.92 }}
                       disabled={!inputMessage.trim() || isSending}
-                      className="size-8 rounded-full bg-[#2b7fff] disabled:bg-zinc-200 text-white disabled:text-zinc-400 flex items-center justify-center transition-all cursor-pointer disabled:cursor-not-allowed hover:bg-[#2563eb] shadow-xs border-0"
+                      className="size-9 sm:size-10 rounded-2xl bg-gradient-to-r from-[#2b7fff] to-blue-600 disabled:from-zinc-200 disabled:to-zinc-200 text-white disabled:text-zinc-400 flex items-center justify-center transition-all cursor-pointer disabled:cursor-not-allowed hover:shadow-md hover:shadow-blue-500/25 border-0"
                     >
                       {isSending ? (
-                        <Loader2 className="size-4 animate-spin" />
+                        <Loader2 className="size-4.5 animate-spin" />
                       ) : (
-                        <ArrowUp className="size-4 stroke-[2.5]" />
+                        <ArrowUp className="size-4.5 stroke-[2.5]" />
                       )}
                     </motion.button>
                   </div>
                 </div>
               </form>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
