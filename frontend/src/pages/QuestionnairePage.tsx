@@ -257,10 +257,86 @@ export default function QuestionnairePage() {
     try {
       await contextApi.save(activeConvId, contextPayload);
       setStatusMessage("AI is designing your custom learning roadmap...");
-      const { data } = await roadmapApi.generate(activeConvId);
-      if (data?.roadmap) {
-        const roadmapObj = data.roadmap.rawJson || data.roadmap;
-        localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(roadmapObj));
+
+      // ── SSE Streaming Roadmap Generation ──────────────────────────────────
+      const sessionStr = localStorage.getItem("session");
+      const token = sessionStr ? JSON.parse(sessionStr)?.access_token : "";
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+      const isDemoToken = token?.startsWith("demo-") || token?.startsWith("token-");
+
+      if (!isDemoToken && token) {
+        const response = await fetch(`${apiUrl}/ai/conversations/${activeConvId}/roadmap`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({}),
+        });
+
+        if (response.ok && response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder("utf-8");
+          let done = false;
+          let savedRoadmap: object | null = null;
+
+          while (!done) {
+            const { value, done: readerDone } = await reader.read();
+            done = readerDone;
+            if (value) {
+              const text = decoder.decode(value, { stream: true });
+              const lines = text.split("\n\n");
+              for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                  try {
+                    const evt = JSON.parse(line.replace("data: ", ""));
+                    if (evt.type === "status") {
+                      setStatusMessage(evt.message || "Generating your roadmap…");
+                    } else if (evt.type === "roadmap") {
+                      savedRoadmap = evt.roadmap;
+                    }
+                  } catch { /* partial chunk */ }
+                }
+              }
+            }
+          }
+
+          if (savedRoadmap) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const roadmapObj = (savedRoadmap as any).rawJson || savedRoadmap;
+            localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(roadmapObj));
+            setTimeout(() => navigate(`/conversations/${activeConvId}/roadmap`), 400);
+            return;
+          }
+        }
+      }
+
+      // Fallback: non-streaming JSON request (for demo users or streaming failure)
+      try {
+        const { data } = await roadmapApi.generate(activeConvId);
+        if (data?.roadmap) {
+          const roadmapObj = data.roadmap.rawJson || data.roadmap;
+          localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(roadmapObj));
+        }
+      } catch {
+        // Offline fallback: generate structured custom roadmap
+        const generated = generateOfflineCustomRoadmap();
+        localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(generated));
+
+        // Add to local conversations list in dashboard
+        const existingList = JSON.parse(localStorage.getItem("local_conversations") || "[]");
+        const newConv = {
+          id: activeConvId,
+          title: learningGoal.trim(),
+          status: "ACTIVE",
+          createdAt: new Date().toISOString(),
+          progress: 0,
+          category: "Custom Path",
+          learningContext: contextPayload,
+          roadmap: generated,
+        };
+        localStorage.setItem("local_conversations", JSON.stringify([newConv, ...existingList]));
       }
     } catch {
       // Offline fallback: generate structured custom roadmap

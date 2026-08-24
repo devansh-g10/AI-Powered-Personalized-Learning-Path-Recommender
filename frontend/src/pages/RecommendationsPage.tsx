@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sparkles,
   ExternalLink,
@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { conversationsApi, contextApi } from "@/lib/api";
 
 interface ResourceItem {
   id: string;
@@ -115,6 +116,38 @@ export default function RecommendationsPage() {
   const [resources] = useState<ResourceItem[]>(initialResources);
   const [selectedType, setSelectedType] = useState<string>("All");
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set(["rec-1", "rec-3"]));
+  const [learningGoal, setLearningGoal] = useState("");
+  const [currentLevel, setCurrentLevel] = useState("");
+  const [weeklyHours, setWeeklyHours] = useState<number>(12);
+
+  // Load user's learning context from the latest conversation
+  useEffect(() => {
+    const loadContext = async () => {
+      try {
+        const { data } = await conversationsApi.list();
+        const convs = data?.conversations;
+        if (!convs || convs.length === 0) return;
+        const latestId = convs[0].id;
+
+        let ctx: { learningGoal?: string; currentLevel?: string; weeklyHours?: number } | null = null;
+        try {
+          const { data: ctxData } = await contextApi.get(latestId);
+          ctx = ctxData?.context;
+        } catch {
+          const stored = localStorage.getItem(`context_${latestId}`);
+          if (stored) ctx = JSON.parse(stored);
+        }
+
+        if (ctx?.learningGoal) setLearningGoal(ctx.learningGoal);
+        if (ctx?.currentLevel) setCurrentLevel(ctx.currentLevel);
+        if (ctx?.weeklyHours) setWeeklyHours(ctx.weeklyHours);
+      } catch {
+        // silent fallback
+      }
+    };
+    loadContext();
+  }, []);
+
 
   const types = ["All", "Documentation", "Video", "Project", "GitHub"];
 
@@ -147,12 +180,14 @@ export default function RecommendationsPage() {
             Curated Resources & Projects
           </h1>
           <p className="text-[#71717b] text-sm leading-5">
-            Hand-picked tutorials, official docs, repository templates, and practice projects synchronized with your roadmap stage.
+            {learningGoal
+              ? `Resources tailored for your goal: "${learningGoal}"`
+              : "Hand-picked tutorials, official docs, repository templates, and practice projects synchronized with your roadmap stage."}
           </p>
         </div>
 
         <Badge className="bg-[#2b7fff]/10 text-[#2b7fff] border-0 px-3 py-1 text-xs">
-          Stage 2: Core Frontend
+          {currentLevel ? `Level: ${currentLevel.charAt(0).toUpperCase() + currentLevel.slice(1)}` : "Stage 2: Core Frontend"}
         </Badge>
       </div>
 
@@ -166,7 +201,7 @@ export default function RecommendationsPage() {
             </h3>
           </div>
           <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-500">
-            Target: 12 Hours / Week
+            Target: {weeklyHours} Hours / Week
           </span>
         </div>
 

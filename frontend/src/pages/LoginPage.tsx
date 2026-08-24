@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Route, Eye, EyeOff, Loader2, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -12,6 +12,8 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, loginDemoUser, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: Location })?.from?.pathname || "/";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +21,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await login(email, password);
-      navigate("/");
+      navigate(from, { replace: true });
     } catch (err: unknown) {
       const axiosErr = err as {
         response?: { data?: { message?: string } };
@@ -38,7 +40,7 @@ export default function LoginPage() {
 
   const handleDemoLogin = () => {
     loginDemoUser();
-    navigate("/");
+    navigate(from, { replace: true });
   };
 
   const handleGoogleLogin = async () => {

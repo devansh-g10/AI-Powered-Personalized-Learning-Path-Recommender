@@ -55,19 +55,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = !!session && !!user;
 
   // Persist session helpers
-  const saveSession = (sess: Session, usr: User) => {
+  const saveSession = useCallback((sess: Session, usr: User) => {
     localStorage.setItem("session", JSON.stringify(sess));
     localStorage.setItem("user", JSON.stringify(usr));
     setSession(sess);
     setUser(usr);
-  };
+  }, []);
 
-  const clearSession = () => {
+  const clearSession = useCallback(() => {
     localStorage.removeItem("session");
     localStorage.removeItem("user");
     setSession(null);
     setUser(null);
-  };
+  }, []);
 
   // ─── Fetch profile ────────────────────────────────────────────────────────
   const fetchProfile = useCallback(async () => {
@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchProfile]);
 
   // ─── 1-Click Demo Login ───────────────────────────────────────────────────
-  const loginDemoUser = () => {
+  const loginDemoUser = useCallback(() => {
     const demoUser: User = {
       id: "demo-user-101",
       email: "learner@pathai.dev",
@@ -130,10 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh_token: "demo-refresh-token",
     };
     saveSession(demoSession, demoUser);
-  };
+  }, [saveSession]);
 
   // ─── Login ────────────────────────────────────────────────────────────────
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     if (email === "demo@pathai.dev" && password === "demopassword") {
       loginDemoUser();
       return;
@@ -145,10 +145,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fullName: data.user.fullName || "User",
       avatarUrl: data.user.avatarUrl,
     });
-  };
+  }, [saveSession, loginDemoUser]);
 
   // ─── Register ─────────────────────────────────────────────────────────────
-  const register = async (
+  const register = useCallback(async (
     fullName: string,
     email: string,
     password: string
@@ -166,18 +166,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       requiresEmailConfirmation: !!data.requiresEmailConfirmation,
       user: data.user,
     };
-  };
+  }, [saveSession]);
 
   // ─── Update Profile ───────────────────────────────────────────────────────
-  const updateUserProfile = (updates: Partial<User>) => {
+  const updateUserProfile = useCallback((updates: Partial<User>) => {
     if (!user) return;
     const updated = { ...user, ...updates };
     setUser(updated);
     localStorage.setItem("user", JSON.stringify(updated));
-  };
+  }, [user]);
 
   // ─── Google OAuth ─────────────────────────────────────────────────────────
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = useCallback(async () => {
     try {
       const { data } = await authApi.getGoogleOAuthUrl();
       window.location.href = data.url;
@@ -185,10 +185,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Demo fallback if backend is offline
       loginDemoUser();
     }
-  };
+  }, [loginDemoUser]);
 
   // ─── Handle Google callback ───────────────────────────────────────────────
-  const handleGoogleCallback = async (accessToken: string, refreshToken: string) => {
+  const handleGoogleCallback = useCallback(async (accessToken: string, refreshToken: string) => {
     const sess: Session = {
       access_token: accessToken,
       refresh_token: refreshToken,
@@ -203,12 +203,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     await fetchProfile();
-  };
+  }, [fetchProfile]);
 
   // ─── Logout ───────────────────────────────────────────────────────────────
-  const logout = () => {
+  const logout = useCallback(() => {
     clearSession();
-  };
+  }, [clearSession]);
 
   return (
     <AuthContext.Provider

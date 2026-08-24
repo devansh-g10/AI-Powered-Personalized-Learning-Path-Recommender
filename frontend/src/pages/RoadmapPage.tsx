@@ -69,211 +69,78 @@ interface RoadmapData {
   totalEstimatedWeeks?: number;
 }
 
-// ─── Default Sample Data ──────────────────────────────────────────────────────
-
-const defaultRoadmap: RoadmapData = {
-  objective: "Frontend Engineering Roadmap",
-  currentAssessment: "Your personalized journey from foundation to career-ready, adapted by AI.",
-  totalEstimatedWeeks: 16,
-  phases: [
-    {
-      phaseId: "phase-1",
-      title: "Foundation",
-      description: "HTML, CSS fundamentals & version control basics.",
-      estimatedWeeks: 3,
-      topics: [
-        {
-          topicId: "topic-001",
-          title: "Semantic HTML",
-          description: "Accessible, SEO-friendly modern markup structure.",
-          completed: true,
-        },
-        {
-          topicId: "topic-002",
-          title: "CSS Layout & Flexbox",
-          description: "Responsive layouts, flexbox, CSS grid, and modern styling.",
-          completed: true,
-        },
-        {
-          topicId: "topic-003",
-          title: "Git & GitHub",
-          description: "Branching, merge requests, collaboration workflows.",
-          completed: true,
-        },
-      ],
-    },
-    {
-      phaseId: "phase-2",
-      title: "Core",
-      description: "JavaScript, React & modern state management.",
-      estimatedWeeks: 5,
-      topics: [
-        {
-          topicId: "topic-004",
-          title: "JavaScript Deep Dive",
-          description: "ES6+, Async/Await, Closures, Event Loop & DOM APIs.",
-          completed: true,
-        },
-        {
-          topicId: "topic-005",
-          title: "React Fundamentals",
-          description: "Components, hooks, props, lifecycle & virtual DOM.",
-          completed: false,
-        },
-        {
-          topicId: "topic-006",
-          title: "State Management",
-          description: "Context API, Zustand, Redux Toolkit & data caching.",
-          completed: false,
-        },
-      ],
-    },
-    {
-      phaseId: "phase-3",
-      title: "Advanced",
-      description: "Performance, testing, TypeScript & architecture.",
-      estimatedWeeks: 4,
-      topics: [
-        {
-          topicId: "topic-007",
-          title: "TypeScript",
-          description: "Type safety, generics, interfaces, union types in React.",
-          completed: false,
-        },
-        {
-          topicId: "topic-008",
-          title: "Testing Strategies",
-          description: "Vitest, React Testing Library, E2E with Playwright.",
-          completed: false,
-        },
-        {
-          topicId: "topic-009",
-          title: "Performance Optimization",
-          description: "Code splitting, lazy loading, memoization, Core Web Vitals.",
-          completed: false,
-        },
-      ],
-    },
-    {
-      phaseId: "phase-4",
-      title: "Projects",
-      description: "Build 3 portfolio-grade real-world applications.",
-      estimatedWeeks: 3,
-      topics: [
-        {
-          topicId: "topic-010",
-          title: "Analytics Dashboard",
-          description: "Interactive charts, real-time metrics, auth guards.",
-          completed: false,
-        },
-        {
-          topicId: "topic-011",
-          title: "E-commerce App",
-          description: "Cart state, payment checkout, product filters.",
-          completed: false,
-        },
-        {
-          topicId: "topic-012",
-          title: "Realtime Chat",
-          description: "WebSockets, instant messaging, notification badges.",
-          completed: false,
-        },
-      ],
-    },
-    {
-      phaseId: "phase-5",
-      title: "Career Ready",
-      description: "Interview prep, system design & job applications.",
-      estimatedWeeks: 2,
-      topics: [
-        {
-          topicId: "topic-013",
-          title: "System Design",
-          description: "Frontend architecture, caching, microfrontends.",
-          completed: false,
-        },
-        {
-          topicId: "topic-014",
-          title: "Interview Prep",
-          description: "Data structures in JS, behavioral prep, live coding.",
-          completed: false,
-        },
-        {
-          topicId: "topic-015",
-          title: "Job Applications",
-          description: "Resume optimization, GitHub portfolio, LinkedIn outreach.",
-          completed: false,
-        },
-      ],
-    },
-  ],
-};
-
 const phaseIcons = [Check, Zap, Layers, FolderGit2, Trophy];
+
 
 export default function RoadmapPage() {
   const { id: routeConvId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [conversationId, setConversationId] = useState<string | null>(routeConvId || "default-roadmap");
-  const [roadmap, setRoadmap] = useState<RoadmapData>(defaultRoadmap);
-  const [selectedPhaseIndex, setSelectedPhaseIndex] = useState(1);
+  const [conversationId, setConversationId] = useState<string | null>(routeConvId || null);
+  const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
+  const [selectedPhaseIndex, setSelectedPhaseIndex] = useState(0);
   const [completedTopicIds, setCompletedTopicIds] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [roadmapError, setRoadmapError] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Topic Question Modal State
   const [activeQuestionTopic, setActiveQuestionTopic] = useState<Topic | null>(null);
   const [userQuestion, setUserQuestion] = useState("");
+  const [qaHistory, setQaHistory] = useState<{ question: string; answer: string }[]>([]);
   const [isAsking, setIsAsking] = useState(false);
-  const [aiAnswer, setAiAnswer] = useState<string | null>(null);
+  const [streamingAnswer, setStreamingAnswer] = useState("");
 
   // Roadmap Modification Dialog State
   const [isModifying, setIsModifying] = useState(false);
   const [modifyPrompt, setModifyPrompt] = useState("");
   const [isSubmittingMod, setIsSubmittingMod] = useState(false);
+  const [modifyError, setModifyError] = useState("");
 
   // Load Roadmap & Persisted Completed Checkmarks
   useEffect(() => {
-    const activeId = routeConvId || conversationId || "default-roadmap";
+    const activeId = routeConvId || null;
     setConversationId(activeId);
 
-    // 1. Check local completed milestones
-    const savedCompleted = localStorage.getItem(`completed_topics_${activeId}`);
-    if (savedCompleted) {
-      try {
-        setCompletedTopicIds(new Set(JSON.parse(savedCompleted)));
-      } catch {
-        setCompletedTopicIds(new Set(["topic-001", "topic-002", "topic-003", "topic-004"]));
-      }
-    } else {
-      setCompletedTopicIds(new Set(["topic-001", "topic-002", "topic-003", "topic-004"]));
+    if (!activeId) {
+      setRoadmapError("No conversation ID found. Please generate a roadmap from the Dashboard.");
+      setIsLoading(false);
+      return;
     }
 
-    // 2. Check stored custom roadmap or fetch from API
+    // Load persisted completed topics
+    const savedCompleted = localStorage.getItem(`completed_topics_${activeId}`);
+    if (savedCompleted) {
+      try { setCompletedTopicIds(new Set(JSON.parse(savedCompleted))); } catch { /* ignore */ }
+    }
+
+    // Try cached roadmap first
     const storedRoadmap = localStorage.getItem(`roadmap_${activeId}`);
     if (storedRoadmap) {
       try {
-        setRoadmap(JSON.parse(storedRoadmap));
-        return;
-      } catch {
-        // fallback
-      }
+        const parsed = JSON.parse(storedRoadmap);
+        if (parsed?.phases?.length) {
+          setRoadmap(parsed);
+          setIsLoading(false);
+          return;
+        }
+      } catch { /* ignore */ }
     }
 
-    // 3. Try API fetch
+    // Fetch from API
     const fetchRemoteRoadmap = async () => {
-      if (!routeConvId) return;
       try {
         setIsLoading(true);
-        const { data } = await roadmapApi.get(routeConvId);
+        const { data } = await roadmapApi.get(activeId);
         const rData = data.roadmap?.rawJson || data.roadmap;
-        if (rData && rData.phases) {
+        if (rData?.phases?.length) {
           setRoadmap(rData);
           localStorage.setItem(`roadmap_${activeId}`, JSON.stringify(rData));
+        } else {
+          setRoadmapError("No roadmap found. Please complete the questionnaire first.");
         }
       } catch {
-        // use default
+        setRoadmapError("Could not load roadmap. Please check your connection or generate a new one.");
       } finally {
         setIsLoading(false);
       }
@@ -283,10 +150,12 @@ export default function RoadmapPage() {
   }, [routeConvId]);
 
   // Calculate Overall Progress
-  const allTopics = roadmap.phases.flatMap((p) => p.topics);
+  const allTopics = roadmap?.phases.flatMap((p) => p.topics) || [];
   const totalTopicCount = allTopics.length || 1;
   const completedCount = allTopics.filter((t) => completedTopicIds.has(t.topicId)).length;
   const progressPercent = Math.round((completedCount / totalTopicCount) * 100);
+
+  const currentSelectedPhase = roadmap?.phases[selectedPhaseIndex] || roadmap?.phases[0] || null;
 
   const toggleTopic = (topicId: string) => {
     setCompletedTopicIds((prev) => {
@@ -302,84 +171,129 @@ export default function RoadmapPage() {
     });
   };
 
-  const currentSelectedPhase = roadmap.phases[selectedPhaseIndex] || roadmap.phases[0];
 
+  /** Stream the topic Q&A response token-by-token using the chat SSE endpoint. */
   const handleAskQuestion = async () => {
-    if (!activeQuestionTopic || !userQuestion.trim()) return;
+    if (!activeQuestionTopic || !userQuestion.trim() || !conversationId) return;
+    const question = userQuestion.trim();
+    setUserQuestion("");
     setIsAsking(true);
+    setStreamingAnswer("");
+
+    const sessionStr = localStorage.getItem("session");
+    const token = sessionStr ? JSON.parse(sessionStr)?.access_token : "";
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+
     try {
-      if (conversationId && conversationId !== "default-roadmap" && !conversationId.startsWith("conv-")) {
-        const { data } = await topicApi.askQuestion(
-          conversationId,
-          activeQuestionTopic.topicId,
-          userQuestion
-        );
-        if (data?.answer) {
-          setAiAnswer(data.answer);
-          setIsAsking(false);
-          return;
+      // First try the dedicated topic Q&A endpoint (non-streaming, rich context)
+      const resp = await fetch(
+        `${apiUrl}/ai/conversations/${conversationId}/topics/${activeQuestionTopic.topicId}/questions`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ question }),
+        }
+      );
+      if (resp.ok) {
+        const json = await resp.json();
+        const answer = json.answer || "";
+        // Simulate streaming token-by-token for a ChatGPT-like effect
+        setQaHistory((prev) => [...prev, { question, answer: "" }]);
+        let displayed = "";
+        const words = answer.split(" ");
+        for (let i = 0; i < words.length; i++) {
+          displayed += (i === 0 ? "" : " ") + words[i];
+          const snapshot = displayed;
+          setQaHistory((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { question, answer: snapshot };
+            return updated;
+          });
+          await new Promise((r) => setTimeout(r, 18));
+        }
+        setIsAsking(false);
+        return;
+      }
+    } catch { /* fall through to chat SSE */ }
+
+    // Fallback: stream via the general chat endpoint so the user still gets a response
+    try {
+      const chatResp = await fetch(`${apiUrl}/ai/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          message: `[Topic: ${activeQuestionTopic.title}] ${question}`,
+        }),
+      });
+
+      if (!chatResp.ok || !chatResp.body) throw new Error("Stream failed");
+
+      setQaHistory((prev) => [...prev, { question, answer: "" }]);
+      const reader = chatResp.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let done = false;
+      let accumulated = "";
+
+      while (!done) {
+        const { value, done: rd } = await reader.read();
+        done = rd;
+        if (value) {
+          const text = decoder.decode(value, { stream: true });
+          const lines = text.split("\n\n");
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const evt = JSON.parse(line.replace("data: ", ""));
+              if (evt.type === "chunk") {
+                accumulated += evt.content;
+                const snap = accumulated;
+                setQaHistory((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { question, answer: snap };
+                  return updated;
+                });
+              }
+            } catch { /* partial */ }
+          }
         }
       }
-    } catch (e) {
-      console.warn("Topic Q&A remote call failed, using intelligent offline tutor", e);
-    }
-
-    // Dynamic offline AI tutor knowledge response
-    setTimeout(() => {
-      setAiAnswer(
-        `### Key Takeaways for ${activeQuestionTopic.title}:\n\n` +
-        `**1. Concept Overview:**\n` +
-        `${activeQuestionTopic.description || "This milestone is critical for mastering modern development practices and core engineering patterns."}\n\n` +
-        `**2. Practical Implementation Tip:**\n` +
-        `Always test edge cases and decouple business logic from UI components. Implement reusable functions and maintain high test coverage.\n\n` +
-        `**3. Practice Challenge:**\n` +
-        `Build a mini-demo incorporating this topic, integrate it with the rest of your stage milestones, and test performance in Google Chrome DevTools.`
-      );
+    } catch {
+      setQaHistory((prev) => [
+        ...prev,
+        { question, answer: "Could not reach the AI service. Please ensure the backend is running." },
+      ]);
+    } finally {
       setIsAsking(false);
-    }, 600);
+    }
   };
 
   const handleModifyRoadmap = async () => {
     if (!modifyPrompt.trim()) return;
     setIsSubmittingMod(true);
+    setModifyError("");
 
     try {
-      if (conversationId && conversationId !== "default-roadmap" && !conversationId.startsWith("conv-")) {
+      if (conversationId && !conversationId.startsWith("conv-")) {
         const { data } = await roadmapApi.generate(conversationId, modifyPrompt);
-        if (data.roadmap?.rawJson) {
-          setRoadmap(data.roadmap.rawJson);
-          localStorage.setItem(`roadmap_${conversationId}`, JSON.stringify(data.roadmap.rawJson));
+        const updated = data.roadmap?.rawJson || data.roadmap;
+        if (updated?.phases) {
+          setRoadmap(updated);
+          localStorage.setItem(`roadmap_${conversationId}`, JSON.stringify(updated));
           setIsModifying(false);
           setModifyPrompt("");
-          setIsSubmittingMod(false);
           return;
         }
       }
+      setModifyError("Could not modify the roadmap. Please try again.");
     } catch {
-      // offline fallback
+      setModifyError("Failed to reach AI service. Please ensure the server is running.");
+    } finally {
+      setIsSubmittingMod(false);
     }
-
-    // Modify local roadmap dynamically
-    const updatedPhases = [...roadmap.phases];
-    if (updatedPhases[1]) {
-      updatedPhases[1].topics.push({
-        topicId: `topic-${Date.now().toString().slice(-4)}`,
-        title: `Custom Goal: ${modifyPrompt.slice(0, 30)}...`,
-        description: `Adapted learning milestone: ${modifyPrompt}`,
-        completed: false,
-      });
-    }
-
-    const modified = {
-      ...roadmap,
-      phases: updatedPhases,
-    };
-    setRoadmap(modified);
-    const activeId = conversationId || "default-roadmap";
-    localStorage.setItem(`roadmap_${activeId}`, JSON.stringify(modified));
   };
 
   const handleExportRoadmap = () => {
+    if (!roadmap) return;
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(roadmap, null, 2));
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
@@ -396,7 +310,7 @@ export default function RoadmapPage() {
   };
 
   const getPhaseStatus = (index: number) => {
-    const phase = roadmap.phases[index];
+    const phase = roadmap?.phases[index];
     if (!phase) return { label: "Upcoming", variant: "upcoming" };
     const topicsInPhase = phase.topics;
     const finished = topicsInPhase.filter((t) => completedTopicIds.has(t.topicId)).length;
@@ -409,6 +323,38 @@ export default function RoadmapPage() {
     }
     return { label: "Upcoming", variant: "upcoming" };
   };
+
+  // ─── Guard: loading / error / no roadmap ────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="size-10 text-[#2b7fff] animate-spin" />
+        <p className="text-sm text-[#71717b]">Loading your personalized roadmap…</p>
+      </div>
+    );
+  }
+
+  if (roadmapError || !roadmap) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6 text-center">
+        <div className="size-16 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
+          <Sparkles className="size-8" />
+        </div>
+        <div className="max-w-md">
+          <h2 className="font-bold text-xl mb-2">No Roadmap Yet</h2>
+          <p className="text-sm text-[#71717b]">
+            {roadmapError || "Complete the questionnaire to generate your AI-powered roadmap."}
+          </p>
+        </div>
+        <Button
+          onClick={() => navigate("/")}
+          className="bg-[#2b7fff] text-white hover:bg-[#2563eb] gap-2 rounded-xl"
+        >
+          Back to Dashboard
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8 pb-12">
@@ -729,14 +675,28 @@ export default function RoadmapPage() {
               </button>
             </div>
 
-            {aiAnswer ? (
-              <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-900 max-h-64 overflow-y-auto text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed whitespace-pre-wrap">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-[#2b7fff] mb-2">
-                  <Sparkles className="size-3.5" /> PathAI Explanation:
+            <div className="flex-1 overflow-y-auto min-h-[100px] max-h-64 flex flex-col gap-3">
+              {qaHistory.length === 0 && !isAsking && (
+                <div className="text-center text-xs text-[#71717b] my-4">
+                  No questions asked yet. Ask away!
                 </div>
-                {aiAnswer}
-              </div>
-            ) : null}
+              )}
+              {qaHistory.map((qa, i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <div className="bg-[#2b7fff]/10 text-zinc-900 dark:text-zinc-50 p-3 rounded-xl rounded-tr-sm self-end text-sm max-w-[85%] border border-[#2b7fff]/20">
+                    {qa.question}
+                  </div>
+                  {qa.answer && (
+                    <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-3 rounded-xl rounded-tl-sm self-start text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed max-w-[95%] whitespace-pre-wrap shadow-sm">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#2b7fff] mb-1.5 uppercase tracking-wide">
+                        <Sparkles className="size-3" /> PathAI
+                      </div>
+                      {qa.answer}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
 
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">

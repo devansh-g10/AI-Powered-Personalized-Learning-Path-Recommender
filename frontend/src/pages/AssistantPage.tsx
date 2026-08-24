@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import {
   Send,
   Sparkles,
@@ -11,11 +11,14 @@ import {
   Trash2,
   Lightbulb,
   Zap,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { messagesApi, conversationsApi } from "@/lib/api";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface MessageItem {
   id?: string;
@@ -23,6 +26,7 @@ interface MessageItem {
   content: string;
   createdAt?: string;
   topicTag?: string;
+  isStreaming?: boolean;
 }
 
 const quickPrompts = [
@@ -35,6 +39,7 @@ const quickPrompts = [
 export default function AssistantPage() {
   const { id: routeConvId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const topicParam = searchParams.get("topic");
 
   const [conversationId, setConversationId] = useState<string | null>(routeConvId || null);
@@ -75,7 +80,7 @@ export default function AssistantPage() {
         },
       ]);
     }
-  }, [topicParam]);
+  }, [topicParam, activeTopic]);
 
   // Load conversation & messages
   useEffect(() => {
@@ -132,6 +137,25 @@ export default function AssistantPage() {
     const text = (userTextToSend || inputMessage).trim();
     if (!text || isSending) return;
 
+    // ── Demo user guard ──────────────────────────────────────────────────────
+    const sessionStr = localStorage.getItem("session");
+    const token = sessionStr ? JSON.parse(sessionStr)?.access_token : "";
+    const isDemoToken = !token || token.startsWith("demo-") || token.startsWith("token-");
+    if (isDemoToken) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "HUMAN", content: text, createdAt: new Date().toISOString() },
+        {
+          role: "AI",
+          content:
+            "🔒 **AI Chat requires a real account.**\n\nDemo mode doesn't support live AI responses. Please [sign in](/login) or [register](/register) to unlock the full AI tutor powered by Mistral AI.",
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+      setInputMessage("");
+      return;
+    }
+
     setInputMessage("");
 
     const tempUserMsg: MessageItem = {
@@ -161,97 +185,91 @@ export default function AssistantPage() {
 
     try {
       if (targetConvId && !targetConvId.startsWith("conv-")) {
-        const { data } = await messagesApi.send(targetConvId, text);
-        const aiMsg: MessageItem = {
-          id: data.messageId,
-          role: "AI",
-          content: data.message,
-          createdAt: new Date().toISOString(),
-        };
-        const updatedWithAi = [...updatedWithUser, aiMsg];
-        setMessages(updatedWithAi);
-        saveMessagesLocally(updatedWithAi);
+        const sessionStr = localStorage.getItem("session");
+        const token = sessionStr ? JSON.parse(sessionStr)?.access_token : "";
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+
+        const response = await fetch(`${apiUrl}/ai/conversations/${targetConvId}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ message: text }),
+        });
+
+        if (!response.ok) throw new Error("Stream failed");
+
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("No reader");
+
+        const decoder = new TextDecoder("utf-8");
+        let done = false;
+        let aiResponseContent = "";
+
+        // Add a placeholder message for the AI
+        setMessages((prev) => [
+          ...prev,
+          { role: "AI", content: "", isStreaming: true },
+        ]);
+
+        while (!done) {
+          const { value, done: readerDone } = await reader.read();
+          done = readerDone;
+          if (value) {
+            const chunkString = decoder.decode(value, { stream: true });
+            const lines = chunkString.split("\n\n");
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                const dataStr = line.replace("data: ", "");
+                try {
+                  const data = JSON.parse(dataStr);
+                  if (data.type === "chunk") {
+                    aiResponseContent += data.content;
+                    setMessages((prev) => {
+                      const newMessages = [...prev];
+                      newMessages[newMessages.length - 1] = {
+                        role: "AI",
+                        content: aiResponseContent,
+                        isStreaming: true,
+                      };
+                      return newMessages;
+                    });
+                  } else if (data.type === "done") {
+                    setMessages((prev) => {
+                      const newMessages = [...prev];
+                      newMessages[newMessages.length - 1].isStreaming = false;
+                      saveMessagesLocally(newMessages);
+                      return newMessages;
+                    });
+                  }
+                } catch {
+                  // partial chunk or non-json
+                }
+              }
+            }
+          }
+        }
         setIsSending(false);
         return;
       }
     } catch (e) {
-      console.warn("Message send remote call failed, using intelligent offline tutor", e);
-    }
-
-    // Intelligent Offline Tutor response engine
-    setTimeout(() => {
-      let aiResponseContent = "";
-      const lower = text.toLowerCase();
-
-      if (lower.includes("code") || lower.includes("example")) {
-        aiResponseContent =
-          `Here is a production-ready example for **${activeTopic}**:\n\n` +
-          "```tsx\n" +
-          "import React, { useState, useEffect, useMemo } from 'react';\n\n" +
-          "interface DataItem {\n" +
-          "  id: string;\n" +
-          "  title: string;\n" +
-          "  active: boolean;\n" +
-          "}\n\n" +
-          "export function TopicMasteryComponent({ topic }: { topic: string }) {\n" +
-          "  const [items, setItems] = useState<DataItem[]>([]);\n" +
-          "  const [loading, setLoading] = useState(true);\n\n" +
-          "  // Memoized filter for performance optimization\n" +
-          "  const activeItems = useMemo(() => {\n" +
-          "    return items.filter((item) => item.active);\n" +
-          "  }, [items]);\n\n" +
-          "  return (\n" +
-          "    <div className='p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950'>\n" +
-          "      <h3 className='font-bold text-lg'>{topic}</h3>\n" +
-          "      <p className='text-sm text-zinc-600 dark:text-zinc-400'>Active items: {activeItems.length}</p>\n" +
-          "    </div>\n" +
-          "  );\n" +
-          "}\n" +
-          "```\n\n" +
-          "**Key Architectural Highlights:**\n" +
-          "- Uses `useMemo` to prevent redundant recalculations on renders.\n" +
-          "- Fully typed with strict TypeScript interfaces.\n" +
-          "- Modular component structure aligned with clean code standards.";
-      } else if (lower.includes("project") || lower.includes("mini")) {
-        aiResponseContent =
-          `🛠️ **Hands-on Capstone Challenge for ${activeTopic}:**\n\n` +
-          "**Project Title:** Interactive Metric Tracker with Local Persistence\n\n" +
-          "**Requirements:**\n" +
-          "1. Build a multi-step checklist where state updates trigger optimistic UI changes.\n" +
-          "2. Store user progress in `localStorage` and handle edge cases when storage is full.\n" +
-          "3. Add a debounced search filter with real-time feedback.\n\n" +
-          "**Expected Learning Outcome:**\n" +
-          "Deep mastery of state management, custom hook encapsulation, and DOM performance.";
-      } else if (lower.includes("interview") || lower.includes("question")) {
-        aiResponseContent =
-          `🎯 **Top 3 Interview Questions for ${activeTopic}:**\n\n` +
-          "1. **How does the Virtual DOM diffing algorithm work, and why are keys important?**\n" +
-          "   *Tip:* Explain heuristic O(n) diffing, fiber reconciliation, and avoiding array index keys.\n\n" +
-          "2. **What is the difference between microtasks and macrotasks in the event loop?**\n" +
-          "   *Tip:* Mention `Promise.then` vs `setTimeout` execution order.\n\n" +
-          "3. **How do you prevent unnecessary re-renders in deep React component trees?**\n" +
-          "   *Tip:* Compare `React.memo`, `useCallback`, `useMemo`, and state colocation.";
-      } else {
-        aiResponseContent =
-          `Regarding **"${text}"** in the context of **${activeTopic}**:\n\n` +
-          `1. **Core Principle:** In modern full-stack architectures, focus on separation of concerns and clear data flow contracts.\n` +
-          `2. **Best Practice:** Keep state as close as possible to where it is used (state colocation), and avoid premature abstraction.\n` +
-          `3. **Next Step:** Check off the corresponding milestone on your **Roadmap** and verify the verified competency in the **Skills** tab!`;
-      }
-
-      const aiMsg: MessageItem = {
-        id: `ai-${Date.now()}`,
-        role: "AI",
-        content: aiResponseContent,
-        createdAt: new Date().toISOString(),
-        topicTag: activeTopic,
-      };
-
-      const finalMsgs = [...updatedWithUser, aiMsg];
-      setMessages(finalMsgs);
-      saveMessagesLocally(finalMsgs);
+      console.warn("Message send remote call failed", e);
+      const errMsg = (e as { status?: number; message?: string })?.status === 401 ||
+        (e as { status?: number; message?: string })?.status === 403
+        ? "🔒 **Session expired.** Please [sign in again](/login) to continue chatting."
+        : "Sorry, I am currently unable to connect to the backend. Please check that the server is running.";
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "AI",
+          content: errMsg,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
       setIsSending(false);
-    }, 700);
+    }
   };
 
   const handleClearChat = () => {
@@ -267,6 +285,31 @@ export default function AssistantPage() {
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col h-[calc(100vh-140px)] min-h-[620px] gap-4">
+      {/* Demo user banner */}
+      {(() => {
+        const sessionStr = localStorage.getItem("session");
+        const token = sessionStr ? JSON.parse(sessionStr)?.access_token : "";
+        const isDemo = !token || token.startsWith("demo-") || token.startsWith("token-");
+        return isDemo ? (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+            <Lock className="size-4 text-amber-600 shrink-0" />
+            <p className="text-xs text-amber-800 dark:text-amber-300 flex-1">
+              <strong>Demo mode</strong> — AI responses require a real account.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => navigate("/login")}
+                className="h-7 text-xs bg-[#2b7fff] text-white hover:bg-[#2563eb] rounded-lg px-3">
+                Sign In
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/register")}
+                className="h-7 text-xs rounded-lg px-3">
+                Register
+              </Button>
+            </div>
+          </div>
+        ) : null;
+      })()}
+
       {/* Header */}
       <div className="flex items-center justify-between pb-2 border-b border-zinc-200/60 dark:border-zinc-800/60 flex-wrap gap-2">
         <div className="flex items-center gap-3">
@@ -337,29 +380,38 @@ export default function AssistantPage() {
 
                 {/* Bubble */}
                 <div
-                  className={`p-4 rounded-2xl max-w-[85%] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
+                  className={`p-4 rounded-2xl max-w-[85%] text-sm leading-relaxed whitespace-pre-wrap ${
                     isUser
                       ? "bg-[#2b7fff] text-white rounded-tr-none shadow-md shadow-[#2b7fff]/15"
                       : "bg-white dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800/70 text-zinc-900 dark:text-zinc-50 rounded-tl-none shadow-sm font-sans"
                   }`}
                 >
-                  {msg.content}
+                  <div className={`prose prose-sm max-w-none break-words ${isUser ? 'prose-invert' : 'prose-zinc dark:prose-invert'}`}>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ node, ...props }) => <p className="m-0 mb-2 last:mb-0" {...props} />,
+                        ul: ({ node, ...props }) => <ul className="m-0 ml-4 list-disc space-y-1" {...props} />,
+                        ol: ({ node, ...props }) => <ol className="m-0 ml-4 list-decimal space-y-1" {...props} />,
+                        a: ({ node, ...props }) => <a className="text-zinc-900 underline underline-offset-2 dark:text-white" {...props} />,
+                        code: ({ node, inline, ...props }: any) =>
+                          inline ? (
+                            <code className="rounded bg-zinc-200 px-1 py-0.5 text-xs text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200" {...props} />
+                          ) : (
+                            <pre className="overflow-x-auto rounded-lg bg-zinc-800 p-3 text-zinc-100 dark:bg-zinc-900">
+                              <code {...props} />
+                            </pre>
+                          )
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
+                  {msg.isStreaming && <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-zinc-400 align-middle"></span>}
                 </div>
               </div>
             );
           })
-        )}
-
-        {isSending && (
-          <div className="flex gap-3 items-start">
-            <div className="size-8 rounded-xl shrink-0 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center">
-              <Bot className="size-4 text-[#2b7fff]" />
-            </div>
-            <div className="p-4 rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800/70 rounded-tl-none shadow-sm flex items-center gap-2 text-xs text-[#71717b]">
-              <Loader2 className="size-3.5 text-[#2b7fff] animate-spin" />
-              PathAI is formulating response...
-            </div>
-          </div>
         )}
         <div ref={messagesEndRef} />
       </Card>

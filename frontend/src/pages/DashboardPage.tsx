@@ -46,56 +46,21 @@ export interface ConversationItem {
   } | null;
 }
 
-const defaultCuratedRoadmaps: ConversationItem[] = [
-  {
-    id: "fe-roadmap-01",
-    title: "Frontend Engineering Roadmap",
-    status: "ACTIVE",
-    createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-    progress: 42,
-    category: "Frontend",
-    learningContext: {
-      learningGoal: "Frontend Engineering from foundations to career-ready",
-      currentLevel: "Intermediate",
-    },
-    roadmap: {
-      objective: "Frontend Engineering Roadmap",
-      phases: [{ id: "p1" }, { id: "p2" }, { id: "p3" }, { id: "p4" }, { id: "p5" }],
-    },
-  },
-  {
-    id: "ai-roadmap-02",
-    title: "Full-Stack AI Agents & LLM Systems",
-    status: "ACTIVE",
-    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-    progress: 25,
-    category: "AI & Full-Stack",
-    learningContext: {
-      learningGoal: "Build autonomous AI agents with LangChain, Next.js, and Vector Databases",
-      currentLevel: "Intermediate",
-    },
-    roadmap: {
-      objective: "Full-Stack AI Agents & LLM Systems",
-      phases: [{ id: "p1" }, { id: "p2" }, { id: "p3" }, { id: "p4" }],
-    },
-  },
-  {
-    id: "devops-roadmap-03",
-    title: "DevOps, Docker & Kubernetes CI/CD",
-    status: "ACTIVE",
-    createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
-    progress: 10,
-    category: "DevOps",
-    learningContext: {
-      learningGoal: "Containerization, microservices deployment, and automated GitHub Actions pipelines",
-      currentLevel: "Beginner",
-    },
-    roadmap: {
-      objective: "DevOps, Docker & Kubernetes CI/CD",
-      phases: [{ id: "p1" }, { id: "p2" }, { id: "p3" }],
-    },
-  },
-];
+
+/** Compute real progress % for a conversation from localStorage completed topics. */
+function computeProgress(convId: string, roadmap?: ConversationItem["roadmap"] | null): number {
+  const stored = localStorage.getItem(`completed_topics_${convId}`);
+  if (!stored || !roadmap) return 0;
+  try {
+    const completed: string[] = JSON.parse(stored);
+    const totalPhases = (roadmap as unknown as { phases?: { topics?: unknown[] }[] })?.phases;
+    const totalTopics = totalPhases?.reduce((sum, p) => sum + (p.topics?.length || 0), 0) ?? 0;
+    if (totalTopics === 0) return 0;
+    return Math.round((completed.length / totalTopics) * 100);
+  } catch {
+    return 0;
+  }
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -112,40 +77,30 @@ export default function DashboardPage() {
       const { data } = await conversationsApi.list();
       if (data.conversations && data.conversations.length > 0) {
         const mapped: ConversationItem[] = data.conversations.map((c: {
-id: string;
-  title?: string;
-  status?: string;
-  createdAt?: string;
-  roadmap?: ConversationItem["roadmap"];
-  learningContext?: ConversationItem["learningContext"];
-}) => ({
-  id: c.id,
+          id: string;
+          title?: string;
+          status?: string;
+          createdAt?: string;
+          roadmap?: ConversationItem["roadmap"];
+          learningContext?: ConversationItem["learningContext"];
+        }) => ({
+          id: c.id,
           title: c.title || "Custom Learning Path",
-          status: c.status || "ACTIVE",
+          status: (c.status || "ACTIVE") as ConversationItem["status"],
           createdAt: c.createdAt || new Date().toISOString(),
-          progress: Math.floor(Math.random() * 40) + 10,
+          progress: computeProgress(c.id, c.roadmap),
           category: "Personalized",
           roadmap: c.roadmap,
           learningContext: c.learningContext,
         }));
         setConversations(mapped);
       } else {
-        const stored = localStorage.getItem("local_conversations");
-        if (stored) {
-          setConversations(JSON.parse(stored));
-        } else {
-          setConversations(defaultCuratedRoadmaps);
-          localStorage.setItem("local_conversations", JSON.stringify(defaultCuratedRoadmaps));
-        }
+        // No conversations yet — show empty state (no dummy data)
+        setConversations([]);
       }
     } catch {
-      const stored = localStorage.getItem("local_conversations");
-      if (stored) {
-        setConversations(JSON.parse(stored));
-      } else {
-        setConversations(defaultCuratedRoadmaps);
-        localStorage.setItem("local_conversations", JSON.stringify(defaultCuratedRoadmaps));
-      }
+      // Backend offline — still show empty state, not dummy data
+      setConversations([]);
     } finally {
       setIsLoading(false);
     }
@@ -251,7 +206,14 @@ id: string;
             <BookOpen className="size-6" />
           </div>
           <div>
-            <div className="text-2xl font-bold">18</div>
+            <div className="text-2xl font-bold">
+              {conversations.reduce((sum, c) => {
+                try {
+                  const stored = localStorage.getItem(`completed_topics_${c.id}`);
+                  return sum + (stored ? JSON.parse(stored).length : 0);
+                } catch { return sum; }
+              }, 0)}
+            </div>
             <div className="text-xs text-[#71717b]">Completed Milestones</div>
           </div>
         </Card>
@@ -261,8 +223,10 @@ id: string;
             <Clock className="size-6" />
           </div>
           <div>
-            <div className="text-2xl font-bold">24 hrs</div>
-            <div className="text-xs text-[#71717b]">Learning Time Spent</div>
+            <div className="text-2xl font-bold">
+              {conversations.filter((c) => c.status === "ACTIVE").length}
+            </div>
+            <div className="text-xs text-[#71717b]">Active Paths</div>
           </div>
         </Card>
 
@@ -271,8 +235,10 @@ id: string;
             <Compass className="size-6" />
           </div>
           <div>
-            <div className="text-2xl font-bold">4.8 / 5.0</div>
-            <div className="text-xs text-[#71717b]">Curriculum Match Score</div>
+            <div className="text-2xl font-bold">
+              {conversations.filter((c) => c.status === "COMPLETED").length}
+            </div>
+            <div className="text-xs text-[#71717b]">Completed Paths</div>
           </div>
         </Card>
       </div>

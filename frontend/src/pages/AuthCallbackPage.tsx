@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Route, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -7,8 +7,13 @@ export default function AuthCallbackPage() {
   const { handleGoogleCallback } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  // Guard so the callback only ever runs once, even if deps change
+  const hasRun = useRef(false);
 
   useEffect(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+
     const processCallback = async () => {
       try {
         // Supabase OAuth puts tokens in the URL hash fragment
