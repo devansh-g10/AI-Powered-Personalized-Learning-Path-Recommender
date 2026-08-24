@@ -1,5 +1,6 @@
 import {
   generateRoadmap,
+  generateRoadmapStream,
   askTopicQuestion,
   continueConversation,
   modifyRoadmap,
@@ -191,9 +192,9 @@ export const sendMessageHandler = async (req, res) => {
       await setCachedRoadmap(conversationId, roadmapJson);
     }
 
-    // ── Step 5: Call AI ──────────────────────────────────────────────────────
+    // ── Step 5: Call AI and start stream ─────────────────────────────────────
     const contextToUse = learningContext || {};
-    const aiResponseText = await continueConversation(
+    const stream = await continueConversation(
       message,
       contextToUse,
       roadmapJson,
@@ -204,14 +205,29 @@ export const sendMessageHandler = async (req, res) => {
     const { humanMessageId, aiMessageId } = createMessageIds();
     const now = new Date().toISOString();
 
-    // ── Step 7: Return AI response IMMEDIATELY ────────────────────────────────
-    res.status(200).json({
-      message: aiResponseText,
-      messageId: aiMessageId,
-      conversationId,
-    });
+    // ── Step 7: Setup SSE headers ─────────────────────────────────────────────
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
 
-    // ── Step 8: Enqueue persistence (async, after response sent) ──────────────
+    // Send initial metadata
+    res.write(`data: ${JSON.stringify({ type: "metadata", messageId: aiMessageId, conversationId })}\n\n`);
+
+    // ── Step 8: Stream response chunks ────────────────────────────────────────
+    let fullResponse = "";
+    for await (const chunk of stream) {
+      const content = chunk.content;
+      if (content) {
+        fullResponse += content;
+        res.write(`data: ${JSON.stringify({ type: "chunk", content })}\n\n`);
+      }
+    }
+
+    // End stream
+    res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+    res.end();
+
+    // ── Step 9: Enqueue persistence (async, after response sent) ──────────────
     await enqueuePersistenceJob({
       conversationId,
       userId,
@@ -222,7 +238,7 @@ export const sendMessageHandler = async (req, res) => {
       },
       aiMessage: {
         id: aiMessageId,
-        content: aiResponseText,
+        content: fullResponse,
         metadata: { type: "chat" },
         createdAt: new Date().toISOString(),
       },
@@ -338,7 +354,9 @@ export const generateRoadmapHandler = async (req, res) => {
   try {
     const userId = req.user.id;
     const { conversationId } = req.params;
-    const { modificationRequest } = req.body; // Optional: for roadmap modifications
+    // Initial roadmap generation legitimately has no input body. Default to an
+    // empty object so only the optional modification request is read.
+    const { modificationRequest } = req.body || {};
 
     // Verify ownership
     const conversation = await getConversationById(conversationId, userId);
@@ -421,6 +439,54 @@ export const generateRoadmapHandler = async (req, res) => {
       });
     } else {
       // ── First-time generation path ─────────────────────────────────────────
+      const wantsStream = req.headers.accept?.includes("text/event-stream");
+
+      if (wantsStream) {
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache, no-transform");
+        res.setHeader("Connection", "keep-alive");
+        res.setHeader("X-Accel-Buffering", "no");
+        res.flushHeaders?.();
+
+        const sendEvent = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+        sendEvent({ type: "status", message: "Analyzing your learning profile…" });
+
+        roadmapData = await generateRoadmapStream(
+          learningContext,
+          (content) => sendEvent({ type: "chunk", content })
+        );
+        sendEvent({ type: "status", message: "Organizing your learning milestones…" });
+
+        const savedRoadmap = await saveRoadmap(conversationId, userId, roadmapData);
+        await setCachedRoadmap(conversationId, savedRoadmap.rawJson);
+
+        const { humanMessageId, aiMessageId } = createMessageIds();
+        await enqueuePersistenceJob({
+          conversationId,
+          userId,
+          humanMessage: {
+            id: humanMessageId,
+            content: "Generate my personalized learning roadmap",
+            createdAt: new Date().toISOString(),
+          },
+          aiMessage: {
+            id: aiMessageId,
+            content: `I've generated your personalized learning roadmap for: ${roadmapData.objective}`,
+            metadata: { type: "roadmap_generated", version: 1 },
+            createdAt: new Date().toISOString(),
+          },
+        });
+
+        const { phases, ...roadmapMeta } = roadmapData;
+        sendEvent({ type: "roadmap-meta", roadmap: roadmapMeta });
+        for (const phase of roadmapData.phases) {
+          sendEvent({ type: "phase", phase });
+        }
+        sendEvent({ type: "roadmap", roadmap: savedRoadmap });
+        sendEvent({ type: "done" });
+        return res.end();
+      }
+
       roadmapData = await generateRoadmap(learningContext, previousMessages);
 
       const savedRoadmap = await saveRoadmap(conversationId, userId, roadmapData);
@@ -456,7 +522,17 @@ export const generateRoadmapHandler = async (req, res) => {
     if (err.message === "Conversation not found")
       return res.status(404).json({ message: "Conversation not found" });
     console.error("generateRoadmap error:", err.message);
-    return res.status(503).json({ message: "Failed to generate roadmap. Please try again." });
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ type: "error", message: "Failed to generate roadmap. Please try again." })}\n\n`);
+      return res.end();
+    }
+    const isConfigurationError =
+      /api key|unauthorized|authentication|forbidden/i.test(err.message || "");
+    return res.status(503).json({
+      message: isConfigurationError
+        ? "The AI service credentials are invalid or unavailable. Check MISTRAL_API_KEY on the server."
+        : "Failed to generate roadmap. Please try again.",
+    });
   }
 };
 

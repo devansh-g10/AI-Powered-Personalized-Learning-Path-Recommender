@@ -40,6 +40,8 @@ CRITICAL RULES:
 ${USER_CONTEXT_BLOCK}
 
 You must output a complete, structured JSON roadmap. Do not explain yourself or add markdown — output ONLY the valid JSON structure.
+
+{formatInstructions}
 `),
   HumanMessagePromptTemplate.fromTemplate(
     "Generate a comprehensive, personalized learning roadmap for this user based on their profile above."
@@ -133,6 +135,8 @@ ${USER_CONTEXT_BLOCK}
 
 === CONVERSATION HISTORY ===
 {conversationHistory}
+
+{formatInstructions}
 `),
   HumanMessagePromptTemplate.fromTemplate(
     "Modification request: {modificationRequest}\n\nGenerate the updated roadmap with a clear summary of what changed and why."

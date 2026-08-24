@@ -1,4 +1,5 @@
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
+import { JsonOutputParser, StructuredOutputParser } from "@langchain/core/output_parsers";
 import llm from "./llm.js";
 import {
   roadmapGenerationPrompt,
@@ -70,6 +71,54 @@ function normalizeLearningContext(ctx) {
   };
 }
 
+/**
+ * Converts common model response variants to the one persisted roadmap shape.
+ * Some models return `{ userProfile, roadmap: { title, totalWeeks, phases } }`
+ * despite being asked for the application's top-level schema.
+ */
+function normalizeRoadmapOutput(output) {
+  const source = output?.roadmap || output || {};
+  const profile = output?.userProfile || {};
+  const phases = Array.isArray(source.phases) ? source.phases : [];
+
+  const normalizedPhases = phases.map((phase, phaseIndex) => ({
+    phaseId: phase.phaseId || `phase-${phaseIndex + 1}`,
+    title: phase.title || `Phase ${phaseIndex + 1}`,
+    description: phase.description || "",
+    estimatedWeeks: Math.max(1, Number(phase.estimatedWeeks) || 1),
+    topics: (Array.isArray(phase.topics) ? phase.topics : []).map((topic, topicIndex) => ({
+      topicId: topic.topicId || `topic-${String(phaseIndex * 100 + topicIndex + 1).padStart(3, "0")}`,
+      title: topic.title || `Topic ${topicIndex + 1}`,
+      description: topic.description || "",
+      whyThisExists: topic.whyThisExists || "This topic supports the learning objective.",
+      prerequisites: Array.isArray(topic.prerequisites) ? topic.prerequisites : [],
+      difficulty: ["beginner", "intermediate", "advanced"].includes(topic.difficulty)
+        ? topic.difficulty
+        : "beginner",
+      estimatedHours: Math.max(1, Number(topic.estimatedHours) || 1),
+      subtopics: Array.isArray(topic.subtopics) ? topic.subtopics : [],
+      projects: Array.isArray(topic.projects)
+        ? topic.projects
+        : (Array.isArray(topic.practice)
+          ? topic.practice.map((item) => typeof item === "string" ? item : item?.description).filter(Boolean)
+          : []),
+      isMilestone: Boolean(topic.isMilestone),
+    })),
+  }));
+
+  return {
+    objective: source.objective || source.title || `Learning roadmap for ${profile.learningGoal || "your goal"}`,
+    currentAssessment: source.currentAssessment || source.description || "Assessment based on the provided learning profile.",
+    phases: normalizedPhases,
+    finalOutcome: source.finalOutcome || profile.targetOutcome || source.description || "Complete the learning roadmap.",
+    totalEstimatedWeeks: Math.max(
+      1,
+      Number(source.totalEstimatedWeeks || source.totalWeeks) ||
+        normalizedPhases.reduce((total, phase) => total + phase.estimatedWeeks, 0)
+    ),
+  };
+}
+
 // ─── AI Service Functions ─────────────────────────────────────────────────────
 
 /**
@@ -81,15 +130,50 @@ function normalizeLearningContext(ctx) {
  * @returns {object} Validated roadmap JSON matching RoadmapSchema
  */
 export async function generateRoadmap(learningContext, previousMessages = []) {
-  const structuredLlm = llm.withStructuredOutput(RoadmapSchema, {
-    name: "generate_learning_roadmap",
-  });
-
-  const chain = roadmapGenerationPrompt.pipe(structuredLlm);
+  const formatParser = StructuredOutputParser.fromZodSchema(RoadmapSchema);
+  const jsonParser = new JsonOutputParser();
 
   const ctx = normalizeLearningContext(learningContext);
-  const result = await chain.invoke(ctx);
-  return result;
+  const promptInput = {
+    ...ctx,
+    formatInstructions: formatParser.getFormatInstructions(),
+  };
+  const messages = await roadmapGenerationPrompt.formatMessages(promptInput);
+  const response = await llm.invoke(messages, {
+    response_format: { type: "json_object" },
+  });
+  const result = await jsonParser.parse(response.text);
+  return RoadmapSchema.parse(normalizeRoadmapOutput(result));
+}
+
+/**
+ * Generates the same validated roadmap while forwarding model tokens to the
+ * caller. The caller can use those chunks to provide a live SSE experience.
+ */
+export async function generateRoadmapStream(learningContext, onChunk) {
+  const formatParser = StructuredOutputParser.fromZodSchema(RoadmapSchema);
+  const jsonParser = new JsonOutputParser();
+  const ctx = normalizeLearningContext(learningContext);
+  const messages = await roadmapGenerationPrompt.formatMessages({
+    ...ctx,
+    formatInstructions: formatParser.getFormatInstructions(),
+  });
+
+  const stream = await llm.stream(messages, {
+    response_format: { type: "json_object" },
+  });
+
+  let rawJson = "";
+  for await (const chunk of stream) {
+    const content = getMessageText(chunk.content);
+    if (!content) continue;
+
+    rawJson += content;
+    await onChunk?.(content);
+  }
+
+  const result = await jsonParser.parse(rawJson);
+  return RoadmapSchema.parse(normalizeRoadmapOutput(result));
 }
 
 /**
@@ -135,12 +219,13 @@ export async function askTopicQuestion(learningContext, roadmap, topic, question
 /**
  * Handles a general follow-up message in a conversation.
  * Uses the full roadmap and conversation history for grounding.
+ * Returns a LangChain stream.
  *
  * @param {string} message - User's message
  * @param {object} learningContext - User's questionnaire answers
  * @param {object|null} roadmap - Full roadmap JSON (may be null if not yet generated)
  * @param {Array} previousMessages - Previous conversation messages
- * @returns {string} AI response text
+ * @returns {AsyncIterableIterator} Stream of AI response chunks
  */
 export async function continueConversation(message, learningContext, roadmap, previousMessages = []) {
   // If the message is clearly a cross-questioning about the roadmap and roadmap exists,
@@ -149,27 +234,24 @@ export async function continueConversation(message, learningContext, roadmap, pr
     const chain = crossQuestioningPrompt.pipe(llm);
     const ctx = normalizeLearningContext(learningContext);
 
-    const result = await chain.invoke({
+    return await chain.stream({
       ...ctx,
       fullRoadmapJson: JSON.stringify(roadmap, null, 2),
       conversationHistory: formatConversationHistory(previousMessages),
       userQuestion: message,
     });
-    return result.content;
   }
 
   // General follow-up
   const chain = followUpConversationPrompt.pipe(llm);
   const ctx = normalizeLearningContext(learningContext);
 
-  const result = await chain.invoke({
+  return await chain.stream({
     ...ctx,
     roadmapObjective: roadmap?.objective || "Roadmap not yet generated",
     conversationHistory: formatConversationHistory(previousMessages),
     userMessage: message,
   });
-
-  return result.content;
 }
 
 /**
@@ -190,22 +272,28 @@ export async function modifyRoadmap(
   modificationRequest,
   previousMessages = []
 ) {
-  const structuredLlm = llm.withStructuredOutput(ModifiedRoadmapSchema, {
-    name: "modify_learning_roadmap",
-  });
-
-  const chain = roadmapModificationPrompt.pipe(structuredLlm);
+  const formatParser = StructuredOutputParser.fromZodSchema(ModifiedRoadmapSchema);
+  const jsonParser = new JsonOutputParser();
   const ctx = normalizeLearningContext(learningContext);
 
-  const result = await chain.invoke({
+  const promptInput = {
     ...ctx,
     currentVersion,
     currentRoadmapJson: JSON.stringify(currentRoadmap, null, 2),
     conversationHistory: formatConversationHistory(previousMessages),
     modificationRequest,
+    formatInstructions: formatParser.getFormatInstructions(),
+  };
+  const messages = await roadmapModificationPrompt.formatMessages(promptInput);
+  const response = await llm.invoke(messages, {
+    response_format: { type: "json_object" },
   });
+  const result = await jsonParser.parse(response.text);
 
-  return result;
+  return ModifiedRoadmapSchema.parse({
+    ...result,
+    roadmap: normalizeRoadmapOutput(result?.roadmap || result),
+  });
 }
 
 // ─── Private helpers ──────────────────────────────────────────────────────────
@@ -221,4 +309,16 @@ function isRoadmapQuestion(message) {
   ];
   const lower = message.toLowerCase();
   return roadmapKeywords.some((kw) => lower.includes(kw));
+}
+
+function getMessageText(content) {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+
+  return content
+    .map((block) => {
+      if (typeof block === "string") return block;
+      return block?.type === "text" ? block.text || "" : "";
+    })
+    .join("");
 }
