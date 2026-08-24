@@ -53,7 +53,11 @@ export default function App() {
             <Route path="/recommendations" element={<RecommendationsPage />} />
             <Route path="/assistant" element={<AssistantPage />} />
 
-            {/* Conversation Flow Views */}
+            {/* AI Profiler & Course Creator Views */}
+            <Route path="/questionnaire" element={<QuestionnairePage />} />
+            <Route path="/create" element={<QuestionnairePage />} />
+            <Route path="/create-course" element={<QuestionnairePage />} />
+            <Route path="/courses/create" element={<QuestionnairePage />} />
             <Route
               path="/conversations/:id/questionnaire"
               element={<QuestionnairePage />}

@@ -5,9 +5,9 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 gsap.registerPlugin(ScrollTrigger);
 
 let lenisInstance: Lenis | null = null;
+let rafId: number | null = null;
 
 export function initSmoothScroll(): (() => void) | undefined {
-  // Respect reduced motion preference
   if (
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -15,27 +15,47 @@ export function initSmoothScroll(): (() => void) | undefined {
     return undefined;
   }
 
-  // Avoid double-init
   if (lenisInstance) return undefined;
 
-  lenisInstance = new Lenis({
-    duration: 1.1,
-    easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    touchMultiplier: 1.5,
-  });
+  try {
+    lenisInstance = new Lenis({
+      duration: 0.9,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: "vertical",
+      gestureOrientation: "vertical",
+      smoothWheel: true,
+      wheelMultiplier: 1.0,
+      touchMultiplier: 1.2,
+      prevent: (node: HTMLElement) => {
+        return (
+          node.hasAttribute("data-lenis-prevent") ||
+          node.closest?.("[data-lenis-prevent]") !== null ||
+          node.tagName === "TEXTAREA" ||
+          node.tagName === "INPUT"
+        );
+      },
+    });
 
-  // Sync Lenis scroll position with GSAP ScrollTrigger
-  lenisInstance.on("scroll", ScrollTrigger.update);
+    lenisInstance.on("scroll", ScrollTrigger.update);
 
-  gsap.ticker.add((time: number) => {
-    lenisInstance?.raf(time * 1000);
-  });
-  gsap.ticker.lagSmoothing(0);
+    const rafLoop = (time: number) => {
+      lenisInstance?.raf(time);
+      rafId = requestAnimationFrame(rafLoop);
+    };
+    rafId = requestAnimationFrame(rafLoop);
 
-  return () => {
-    lenisInstance?.destroy();
-    lenisInstance = null;
-  };
+    return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      lenisInstance?.destroy();
+      lenisInstance = null;
+    };
+  } catch (err) {
+    console.warn("Smooth scroll initialization fallback to native:", err);
+    return undefined;
+  }
 }
 
 export function getLenis(): Lenis | null {

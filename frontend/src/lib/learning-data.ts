@@ -84,8 +84,10 @@ export interface DashboardFullData {
     activePaths: number;
     completedPaths: number;
     totalCompletedMilestones: number;
+    totalMilestones: number;
     totalLearningHours: number;
-    matchScore: string; // e.g. "4.9 / 5.0"
+    matchScore: string; // e.g. "4.8 / 5.0" or "—"
+    fitPercent: number; // e.g. 96 or 0
   };
   continueLearning: LearningPathItem | null;
   aiInsight: AIInsightData;
@@ -228,20 +230,12 @@ export const defaultCuratedRoadmapsData: Record<string, RoadmapStructure> = {
         title: "Automated GitHub Actions CI/CD",
         estimatedWeeks: 2,
         topics: [
-          { topicId: "topic-do-07", title: "Automated Test & Build Workflow Pipelines", estimatedHours: 5 },
+          { topicId: "topic-do-07", title: "Automated Test & Build Workflow Pipelines", estimatedHours: 6 },
           { topicId: "topic-do-08", title: "Zero-Downtime Blue-Green & Canary Deployments", estimatedHours: 6 },
         ],
       },
     ],
   },
-};
-
-// ─── Default Initial Completed Topics for seed roadmaps ───────────────────────
-const seedCompletedMap: Record<string, string[]> = {
-  "fe-roadmap-01": ["topic-001", "topic-002", "topic-003", "topic-004"],
-  "ai-roadmap-02": ["topic-ai-01", "topic-ai-02"],
-  "devops-roadmap-03": ["topic-do-01"],
-  "default-roadmap": ["topic-001", "topic-002", "topic-003", "topic-004"],
 };
 
 // ─── Event Dispatcher & Listener for Real-Time UI Sync ───────────────────────
@@ -310,63 +304,44 @@ export async function fetchLiveDashboardData(): Promise<DashboardFullData> {
     }
   }
 
-  // If both empty, seed default curated roadmaps
-  if (rawConversations.length === 0 && localList.length === 0) {
-    localList = [
-      {
-        id: "fe-roadmap-01",
-        title: "Frontend Engineering Roadmap",
-        category: "Frontend",
-        status: "ACTIVE",
-        createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
-        learningContext: {
-          learningGoal: "Frontend Engineering from foundations to career-ready React 19 architecture",
-          currentLevel: "Intermediate",
-          weeklyHours: 10,
-        },
-      },
-      {
-        id: "ai-roadmap-02",
-        title: "Full-Stack AI Agents & LLM Systems",
-        category: "AI & Full-Stack",
-        status: "ACTIVE",
-        createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-        learningContext: {
-          learningGoal: "Build autonomous AI agents with LangChain, Next.js, and Vector Databases",
-          currentLevel: "Intermediate",
-          weeklyHours: 12,
-        },
-      },
-      {
-        id: "devops-roadmap-03",
-        title: "DevOps, Docker & Kubernetes CI/CD",
-        category: "DevOps",
-        status: "ACTIVE",
-        createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
-        learningContext: {
-          learningGoal: "Containerization, microservices deployment, and automated GitHub Actions pipelines",
-          currentLevel: "Beginner",
-          weeklyHours: 8,
-        },
-      },
-    ];
-    localStorage.setItem("local_conversations", JSON.stringify(localList));
-  }
-
-  // Combine and deduplicate
+  // Combine and deduplicate real user paths
   const combinedMap = new Map<string, any>();
   for (const c of localList) {
-    combinedMap.set(c.id, c);
+    if (c && c.id) combinedMap.set(c.id, c);
   }
   for (const c of rawConversations) {
-    const existing = combinedMap.get(c.id) || {};
-    combinedMap.set(c.id, { ...existing, ...c });
+    if (c && c.id) {
+      const existing = combinedMap.get(c.id) || {};
+      combinedMap.set(c.id, { ...existing, ...c });
+    }
   }
 
   const allRaw = Array.from(combinedMap.values());
 
-  // 2. Process each path with its real roadmap structure & completed topics
+  // If user has 0 paths created yet
+  if (allRaw.length === 0) {
+    return {
+      stats: {
+        totalPaths: 0,
+        activePaths: 0,
+        completedPaths: 0,
+        totalCompletedMilestones: 0,
+        totalMilestones: 0,
+        totalLearningHours: 0,
+        matchScore: "—",
+        fitPercent: 0,
+      },
+      continueLearning: null,
+      aiInsight: generateLiveAIInsight([], 0, 0),
+      weeklyActivity: generateWeeklyActivity(0, 0),
+      skillCompetencies: computeLiveSkillCompetencies([]),
+      learningPaths: [],
+    };
+  }
+
+  // 2. Process each real user path with its roadmap structure & completed topics
   let totalMilestonesSum = 0;
+  let totalMilestonesPossible = 0;
   let totalLearningHoursSum = 0;
   let activePathsCount = 0;
   let completedPathsCount = 0;
@@ -416,7 +391,7 @@ export async function fetchLiveDashboardData(): Promise<DashboardFullData> {
       };
     }
 
-    // Retrieve completed topics set
+    // Retrieve completed topics set (ONLY from actual user toggles)
     let completedSet = new Set<string>();
     const savedCompleted = localStorage.getItem(`completed_topics_${pathId}`);
     if (savedCompleted) {
@@ -425,21 +400,18 @@ export async function fetchLiveDashboardData(): Promise<DashboardFullData> {
       } catch {
         completedSet = new Set();
       }
-    } else if (seedCompletedMap[pathId]) {
-      completedSet = new Set(seedCompletedMap[pathId]);
-      localStorage.setItem(`completed_topics_${pathId}`, JSON.stringify(Array.from(completedSet)));
     }
 
     // Calculate topics, progress, current and next milestone
     const allTopics: TopicItem[] = roadmapData.phases.flatMap((p) => p.topics);
-    const totalTopicsCount = allTopics.length || 1;
+    const totalTopicsCount = allTopics.length;
     const completedTopicsCount = allTopics.filter((t) => completedSet.has(t.topicId)).length;
-    const progress = Math.min(100, Math.round((completedTopicsCount / totalTopicsCount) * 100));
+    const progress = totalTopicsCount > 0 ? Math.min(100, Math.round((completedTopicsCount / totalTopicsCount) * 100)) : 0;
 
     // Find current milestone (first uncompleted) and next milestone
-    let currentMilestone = "All Milestones Completed 🎉";
-    let currentPhaseTitle = "Path Complete";
-    let nextMilestone = "Ready for Capstone Certification";
+    let currentMilestone = progress === 100 ? "All Milestones Completed 🎉" : "Ready to Start";
+    let currentPhaseTitle = progress === 100 ? "Path Complete" : roadmapData.phases[0]?.title || "Getting Started";
+    let nextMilestone = "Ready for Next Stage";
     let remainingHours = 0;
 
     let foundCurrent = false;
@@ -470,12 +442,13 @@ export async function fetchLiveDashboardData(): Promise<DashboardFullData> {
 
     // Accumulate total statistics
     totalMilestonesSum += completedTopicsCount;
+    totalMilestonesPossible += totalTopicsCount;
     const pathHours = allTopics
       .filter((t) => completedSet.has(t.topicId))
       .reduce((acc, t) => acc + (t.estimatedHours || 3), 0);
     totalLearningHoursSum += pathHours;
 
-    const status: "ACTIVE" | "COMPLETED" | "DRAFT" = progress === 100 ? "COMPLETED" : "ACTIVE";
+    const status: "ACTIVE" | "COMPLETED" | "DRAFT" = (totalTopicsCount > 0 && progress === 100) ? "COMPLETED" : "ACTIVE";
     if (status === "ACTIVE") activePathsCount++;
     else completedPathsCount++;
 
@@ -507,13 +480,29 @@ export async function fetchLiveDashboardData(): Promise<DashboardFullData> {
   // 3. Find Continue Learning Path (active path with in-progress topics)
   const continueLearning = processedPaths.find((p) => p.status === "ACTIVE" && p.progress < 100) || processedPaths[0] || null;
 
-  // 4. Compute Dynamic AI Insights based on real topic completion data
+  // 4. Calculate Dynamic Match & Goal Alignment Score
+  const fitScores = processedPaths.map((p) => {
+    const goal = p.learningContext?.learningGoal || "";
+    const level = p.learningContext?.currentLevel || "";
+    const weekly = p.learningContext?.weeklyHours || 0;
+    
+    let score = 88;
+    if (goal.length > 10) score += 4;
+    if (level) score += 3;
+    if (weekly > 0) score += 2;
+    if (p.roadmap?.phases && p.roadmap.phases.length >= 3) score += 2;
+    return Math.min(99, Math.max(82, score));
+  });
+  const fitPercent = fitScores.length > 0 ? Math.round(fitScores.reduce((a, b) => a + b, 0) / fitScores.length) : 0;
+  const matchScore = fitPercent > 0 ? `${(fitPercent / 20).toFixed(1)} / 5.0` : "—";
+
+  // 5. Dynamic AI Insights
   const aiInsight = generateLiveAIInsight(processedPaths, totalMilestonesSum, totalLearningHoursSum);
 
-  // 5. Generate Weekly Learning Activity from real data
+  // 6. Weekly Activity
   const weeklyActivity = generateWeeklyActivity(totalLearningHoursSum, totalMilestonesSum);
 
-  // 6. Compute Skill Competencies from verified roadmap progress
+  // 7. Skill Competencies
   const skillCompetencies = computeLiveSkillCompetencies(processedPaths);
 
   return {
@@ -522,8 +511,10 @@ export async function fetchLiveDashboardData(): Promise<DashboardFullData> {
       activePaths: activePathsCount,
       completedPaths: completedPathsCount,
       totalCompletedMilestones: totalMilestonesSum,
-      totalLearningHours: Math.max(totalLearningHoursSum, totalMilestonesSum * 2),
-      matchScore: "4.9 / 5.0",
+      totalMilestones: totalMilestonesPossible,
+      totalLearningHours: totalLearningHoursSum,
+      matchScore,
+      fitPercent,
     },
     continueLearning,
     aiInsight,
@@ -542,41 +533,22 @@ function generateLiveAIInsight(
 ): AIInsightData {
   if (paths.length === 0) {
     return {
-      title: "Initialize Your First Path",
-      badgeText: "Ready to Calibrate",
+      title: "AI Calibration Initializing",
+      badgeText: "Awaiting First Path",
       type: "recommendation",
-      strongestArea: "None yet",
-      largestSkillGap: "Core Fundamentals",
-      summary: "Start a customized learning path to receive tailored AI insights and competency tracking.",
-      actionRecommendation: "Launch the AI profiler to synthesize your first customized curriculum.",
+      strongestArea: "—",
+      largestSkillGap: "No active path",
+      summary: "No active learning paths detected. Start your first personalized AI learning path to unlock telemetry, milestone progress tracking, and skill gap insights.",
+      actionRecommendation: "Click 'New Learning Path' to customize your roadmap based on your current goals and target tech stack.",
     };
   }
 
   // Calculate completion ratios by technology domain
-  let feScore = 0;
-  let aiScore = 0;
-  let devopsScore = 0;
-
-  for (const p of paths) {
-    const cat = p.category.toLowerCase();
-    const title = p.title.toLowerCase();
-    if (cat.includes("front") || title.includes("react") || title.includes("frontend")) {
-      feScore = Math.max(feScore, p.progress);
-    }
-    if (cat.includes("ai") || title.includes("agent") || title.includes("llm")) {
-      aiScore = Math.max(aiScore, p.progress);
-    }
-    if (cat.includes("devops") || title.includes("docker") || title.includes("kubernetes")) {
-      devopsScore = Math.max(devopsScore, p.progress);
-    }
-  }
-
-  // Determine highest and lowest
-  const areas = [
-    { name: "Frontend & Web Architecture", score: feScore },
-    { name: "Full-Stack AI Agents & LLM Systems", score: aiScore },
-    { name: "DevOps & Cloud Containers", score: devopsScore },
-  ];
+  const areas = paths.map((p) => ({
+    name: p.category || p.title,
+    score: p.progress,
+    completed: p.completedTopicsCount,
+  }));
 
   areas.sort((a, b) => b.score - a.score);
   const strongest = areas[0];
@@ -584,14 +556,19 @@ function generateLiveAIInsight(
 
   let badgeText = "Skill Gap Detected";
   let type: AIInsightData["type"] = "gap";
-  let summary = `Your strongest momentum is in ${strongest.name} (${strongest.score}% progress). Your largest current skill gap is ${weakest.name} (${weakest.score}% progress).`;
+  let summary = `Your strongest momentum is in ${strongest.name} (${strongest.score}% progress). Your current priority focus is ${weakest.name} (${weakest.score}% progress).`;
   let actionRecommendation = `Accelerate ${weakest.name} by tackling the next milestone or using the AI Tutor to review architectural foundations.`;
 
   if (strongest.score >= 50 && totalMilestones >= 8) {
     badgeText = "High Engineering Velocity";
     type = "velocity";
-    summary = `You are outpacing 85% of peers with ${totalMilestones} verified milestones and ${totalHours} active hours logged.`;
+    summary = `You have completed ${totalMilestones} verified milestones and ${totalHours} active hours logged.`;
     actionRecommendation = `Solidify ${strongest.name} with an end-to-end portfolio capstone before branching deeper into ${weakest.name}.`;
+  } else if (totalMilestones === 0) {
+    badgeText = "Ready to Begin";
+    type = "recommendation";
+    summary = `Your learning path for ${strongest.name} is configured. Check off your first milestone in the interactive roadmap to start tracking live competency.`;
+    actionRecommendation = `Open your roadmap and begin the first fundamental milestone.`;
   }
 
   const activePath = paths.find((p) => p.status === "ACTIVE");
@@ -601,7 +578,7 @@ function generateLiveAIInsight(
     badgeText,
     type,
     strongestArea: strongest.name,
-    largestSkillGap: weakest.name,
+    largestSkillGap: weakest.score < 100 ? weakest.name : "None",
     summary,
     actionRecommendation,
     actionPathId: activePath?.id,
@@ -610,15 +587,25 @@ function generateLiveAIInsight(
 
 // ─── Weekly Activity Generator ────────────────────────────────────────────────
 
-function generateWeeklyActivity(totalHours: number, _totalMilestones: number): ActivityDay[] {
+function generateWeeklyActivity(totalHours: number, totalMilestones: number): ActivityDay[] {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const now = new Date();
   const currentDayIndex = (now.getDay() + 6) % 7; // 0=Mon, 6=Sun
 
-  // Distribute hours across days with realistic weighting based on total activity
+  if (totalHours === 0 && totalMilestones === 0) {
+    return days.map((dayName, idx) => ({
+      dateStr: new Date(Date.now() - (currentDayIndex - idx) * 86400000).toISOString(),
+      dayName,
+      hours: 0,
+      milestones: 0,
+      isToday: idx === currentDayIndex,
+    }));
+  }
+
+  // Distribute actual logged hours across past days
   const baseWeights = [1.2, 1.8, 0.8, 2.4, 1.5, 3.0, 2.1];
-  const weightSum = baseWeights.reduce((a, b) => a + b, 0);
-  const scaling = Math.max(0.6, totalHours / (weightSum * 1.5));
+  const weightSum = baseWeights.slice(0, currentDayIndex + 1).reduce((a, b) => a + b, 0) || 1;
+  const scaling = totalHours / weightSum;
 
   return days.map((dayName, idx) => {
     const isToday = idx === currentDayIndex;
@@ -639,13 +626,63 @@ function generateWeeklyActivity(totalHours: number, _totalMilestones: number): A
 // ─── Skill Competencies Calculator ────────────────────────────────────────────
 
 function computeLiveSkillCompetencies(paths: LearningPathItem[]): SkillCompetency[] {
+  if (paths.length === 0) {
+    return [
+      {
+        id: "comp-fe",
+        category: "Frontend",
+        score: 0,
+        level: "Developing",
+        completedCount: 0,
+        totalCount: 0,
+        description: "Modern ECMAScript, React 19 concurrent mode, state caching & performance.",
+      },
+      {
+        id: "comp-be",
+        category: "Backend",
+        score: 0,
+        level: "Developing",
+        completedCount: 0,
+        totalCount: 0,
+        description: "Node.js runtime, REST & GraphQL APIs, PostgreSQL schemas & indexing.",
+      },
+      {
+        id: "comp-ai",
+        category: "AI & LLM",
+        score: 0,
+        level: "Developing",
+        completedCount: 0,
+        totalCount: 0,
+        description: "LangChain agents, vector similarity search, RAG retrieval & function calling.",
+      },
+      {
+        id: "comp-do",
+        category: "DevOps",
+        score: 0,
+        level: "Developing",
+        completedCount: 0,
+        totalCount: 0,
+        description: "Multi-stage Dockerfiles, Kubernetes ingress, and GitHub Actions CI/CD.",
+      },
+      {
+        id: "comp-sd",
+        category: "System Design",
+        score: 0,
+        level: "Developing",
+        completedCount: 0,
+        totalCount: 0,
+        description: "Distributed caching, rate limiters, message queues & microservices.",
+      },
+    ];
+  }
+
   const fePath = paths.find((p) => p.category.toLowerCase().includes("front") || p.title.toLowerCase().includes("react"));
   const aiPath = paths.find((p) => p.category.toLowerCase().includes("ai") || p.title.toLowerCase().includes("agent"));
   const doPath = paths.find((p) => p.category.toLowerCase().includes("devops") || p.title.toLowerCase().includes("docker"));
 
-  const feProgress = fePath ? fePath.progress : 45;
-  const aiProgress = aiPath ? aiPath.progress : 25;
-  const doProgress = doPath ? doPath.progress : 15;
+  const feProgress = fePath ? fePath.progress : 0;
+  const aiProgress = aiPath ? aiPath.progress : 0;
+  const doProgress = doPath ? doPath.progress : 0;
   const beProgress = Math.round((feProgress * 0.4 + doProgress * 0.6));
   const sysDesignProgress = Math.round((beProgress * 0.5 + feProgress * 0.3 + aiProgress * 0.2));
 
@@ -655,8 +692,8 @@ function computeLiveSkillCompetencies(paths: LearningPathItem[]): SkillCompetenc
       category: "Frontend",
       score: feProgress,
       level: feProgress >= 80 ? "Mastered" : feProgress >= 40 ? "In Progress" : "Developing",
-      completedCount: fePath?.completedTopicsCount || 4,
-      totalCount: fePath?.totalTopics || 13,
+      completedCount: fePath?.completedTopicsCount || 0,
+      totalCount: fePath?.totalTopics || 0,
       description: "Modern ECMAScript, React 19 concurrent mode, state caching & performance.",
     },
     {
@@ -665,7 +702,7 @@ function computeLiveSkillCompetencies(paths: LearningPathItem[]): SkillCompetenc
       score: beProgress,
       level: beProgress >= 80 ? "Mastered" : beProgress >= 40 ? "In Progress" : "Developing",
       completedCount: Math.round(beProgress / 10),
-      totalCount: 12,
+      totalCount: (fePath?.totalTopics || 0) + (doPath?.totalTopics || 0),
       description: "Node.js runtime, REST & GraphQL APIs, PostgreSQL schemas & indexing.",
     },
     {
@@ -673,8 +710,8 @@ function computeLiveSkillCompetencies(paths: LearningPathItem[]): SkillCompetenc
       category: "AI & LLM",
       score: aiProgress,
       level: aiProgress >= 80 ? "Mastered" : aiProgress >= 40 ? "In Progress" : "Developing",
-      completedCount: aiPath?.completedTopicsCount || 2,
-      totalCount: aiPath?.totalTopics || 11,
+      completedCount: aiPath?.completedTopicsCount || 0,
+      totalCount: aiPath?.totalTopics || 0,
       description: "LangChain agents, vector similarity search, RAG retrieval & function calling.",
     },
     {
@@ -682,8 +719,8 @@ function computeLiveSkillCompetencies(paths: LearningPathItem[]): SkillCompetenc
       category: "DevOps",
       score: doProgress,
       level: doProgress >= 80 ? "Mastered" : doProgress >= 40 ? "In Progress" : "Developing",
-      completedCount: doPath?.completedTopicsCount || 1,
-      totalCount: doPath?.totalTopics || 8,
+      completedCount: doPath?.completedTopicsCount || 0,
+      totalCount: doPath?.totalTopics || 0,
       description: "Multi-stage Dockerfiles, Kubernetes ingress, and GitHub Actions CI/CD.",
     },
     {

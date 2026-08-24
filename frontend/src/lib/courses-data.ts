@@ -699,9 +699,58 @@ export function getCourseByIdOrSlug(idOrSlug: string): CourseItem | undefined {
  * Converts any CourseItem into a full, interactive CourseRoadmapData structure!
  * Ensures EVERY course has its own unique, authentic roadmap stages and milestones.
  */
-export function getRoadmapForCourseOrId(idOrSlug: string): CourseRoadmapData {
-  const course = getCourseByIdOrSlug(idOrSlug);
+export function getRoadmapForCourseOrId(idOrSlug?: string): CourseRoadmapData {
+  const target = (idOrSlug || "").trim();
 
+  // 1. Check direct localStorage roadmap override
+  if (target && typeof window !== "undefined") {
+    try {
+      const storedRoadmap = localStorage.getItem(`roadmap_${target}`);
+      if (storedRoadmap) {
+        const parsed = JSON.parse(storedRoadmap);
+        if (parsed && parsed.phases && parsed.phases.length > 0) {
+          return {
+            objective: parsed.objective || "Personalized Learning Path",
+            currentAssessment: parsed.currentAssessment || parsed.assessment || "Customized AI curriculum tailored to your skills.",
+            totalEstimatedWeeks: parsed.totalEstimatedWeeks || 8,
+            phases: parsed.phases,
+          };
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // 2. Check local_conversations list
+  if (typeof window !== "undefined") {
+    try {
+      const localConvsStr = localStorage.getItem("local_conversations");
+      if (localConvsStr) {
+        const convList = JSON.parse(localConvsStr);
+        if (Array.isArray(convList) && convList.length > 0) {
+          // Find matching conversation or pick first if target is generic/default
+          const matchedConv = target && target !== "default-roadmap"
+            ? convList.find((c: any) => c.id === target || c.title?.toLowerCase() === target.toLowerCase())
+            : convList[0];
+
+          if (matchedConv && matchedConv.roadmap && matchedConv.roadmap.phases && matchedConv.roadmap.phases.length > 0) {
+            return {
+              objective: matchedConv.roadmap.objective || matchedConv.title || "Personalized Learning Path",
+              currentAssessment: matchedConv.roadmap.currentAssessment || matchedConv.learningContext?.learningGoal || "Custom AI Path",
+              totalEstimatedWeeks: matchedConv.roadmap.totalEstimatedWeeks || 10,
+              phases: matchedConv.roadmap.phases,
+            };
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // 3. Match from allCoursesCatalog (by id or slug or title)
+  const course = getCourseByIdOrSlug(target);
   if (course && course.stages && course.stages.length > 0) {
     return {
       objective: `${course.title} Roadmap`,
@@ -722,121 +771,211 @@ export function getRoadmapForCourseOrId(idOrSlug: string): CourseRoadmapData {
     };
   }
 
-  // If a known course has minimal stages, generate structured stages based on its metadata
-  if (course) {
+  // 4. Check if target or goal matches specific known technologies/keywords
+  const lower = target.toLowerCase();
+  if (lower.includes("ai") || lower.includes("llm") || lower.includes("agent") || lower.includes("langchain") || lower.includes("rag")) {
     return {
-      objective: `${course.title} Roadmap`,
-      currentAssessment: course.fullDescription,
-      totalEstimatedWeeks: course.estimatedWeeks,
+      objective: "Full-Stack AI Agents & LLM Systems Roadmap",
+      currentAssessment: "Design autonomous tool-calling agents, RAG vector retrieval pipelines, and streaming LLM backends.",
+      totalEstimatedWeeks: 12,
       phases: [
         {
-          phaseId: `${course.id}-phase-1`,
-          title: "Foundation & Prerequisites",
-          description: `Core fundamentals and prerequisite concepts for ${course.title}.`,
+          phaseId: "ai-p1",
+          title: "Prompt Engineering & Structured JSON",
+          description: "Few-shot prompting, JSON schema enforcement, and tool calling with OpenAI / Anthropic SDKs.",
           estimatedWeeks: 2,
           topics: [
-            {
-              topicId: `${course.id}-top-01`,
-              title: `${course.title} Core Architecture`,
-              description: `Foundational mental models and environment setup for ${course.title}.`,
-            },
-            {
-              topicId: `${course.id}-top-02`,
-              title: "Syntax & Standard Library Conventions",
-              description: "Key idioms, execution mechanics, and design patterns.",
-            },
+            { topicId: "top-ai-01", title: "Few-Shot Prompting & JSON Schema Enforcement", description: "Format LLM responses into strict type-safe schemas." },
+            { topicId: "top-ai-02", title: "OpenAI & Anthropic Function Calling APIs", description: "Wire tools and live data feeds to models." },
+            { topicId: "top-ai-03", title: "LangChain Expression Language (LCEL) Chains", description: "Compose modular chains and stream outputs." },
           ],
         },
         {
-          phaseId: `${course.id}-phase-2`,
-          title: "Core Mechanics & Patterns",
-          description: "Hands-on implementation of primary concepts and workflows.",
+          phaseId: "ai-p2",
+          title: "RAG & Vector Similarity Search",
+          description: "Embedding models, chunking strategies, Pinecone/PGVector, and hybrid semantic retrieval.",
+          estimatedWeeks: 4,
+          topics: [
+            { topicId: "top-ai-04", title: "Text Chunking & Embedding Generation", description: "Optimize token chunks and semantic density." },
+            { topicId: "top-ai-05", title: "Vector DB Retrieval (Pinecone / PGVector)", description: "Index embeddings and query cosine similarity." },
+            { topicId: "top-ai-06", title: "Context Window Optimization & Re-Ranking", description: "Improve accuracy with Cohere reranking." },
+          ],
+        },
+        {
+          phaseId: "ai-p3",
+          title: "Autonomous Multi-Agent Systems",
+          description: "ReAct loops, human-in-the-loop, LangGraph stateful multi-agent workflows, and memory persistence.",
           estimatedWeeks: 3,
           topics: [
-            {
-              topicId: `${course.id}-top-03`,
-              title: "Advanced Implementations",
-              description: "Production patterns, performance optimization, and testing.",
-            },
-            {
-              topicId: `${course.id}-top-04`,
-              title: "State, Caching & Data Management",
-              description: "Scalable data structures and lifecycle synchronization.",
-            },
+            { topicId: "top-ai-07", title: "ReAct Loops & Tool Orchestration Pipelines", description: "Autonomous task execution and verification." },
+            { topicId: "top-ai-08", title: "Multi-Agent Collaboration with LangGraph", description: "Orchestrate agent state graphs and checkpoints." },
+            { topicId: "top-ai-09", title: "Streaming Fastify & Server-Sent Events (SSE)", description: "Deliver low-latency streaming responses." },
           ],
         },
         {
-          phaseId: `${course.id}-phase-3`,
-          title: "Production Capstone & Assessment",
-          description: "Assemble real-world projects and verify competencies.",
-          estimatedWeeks: 2,
+          phaseId: "ai-p4",
+          title: "Production AI Deployment & Guardrails",
+          description: "LLM guardrails, hallucination evaluation benchmarks, caching, and cloud deployment.",
+          estimatedWeeks: 3,
           topics: [
-            {
-              topicId: `${course.id}-top-05`,
-              title: "Production Capstone Application",
-              description: "Build an end-to-end portfolio-grade application.",
-            },
-            {
-              topicId: `${course.id}-top-06`,
-              title: "Final Competency Assessment",
-              description: "Take the verified assessment to unlock skill badges.",
-            },
+            { topicId: "top-ai-10", title: "Guardrails, Hallucination Checks & Evals", description: "Run automated evals and moderation filters." },
+            { topicId: "top-ai-11", title: "Full-Stack Autonomous Code Assistant Capstone", description: "Build and deploy an enterprise agent product." },
           ],
         },
       ],
     };
   }
 
-  // Default fallback if accessed completely generic without a course identifier
+  if (lower.includes("devops") || lower.includes("docker") || lower.includes("kubernetes") || lower.includes("cloud") || lower.includes("aws")) {
+    return {
+      objective: "DevOps, Docker & Kubernetes CI/CD Roadmap",
+      currentAssessment: "Containerize microservices, deploy resilient Kubernetes clusters, and automate zero-downtime releases.",
+      totalEstimatedWeeks: 10,
+      phases: [
+        {
+          phaseId: "do-p1",
+          title: "Linux Internals & Scripting",
+          description: "Linux system internals, permissions, bash scripting, and reverse proxy networking.",
+          estimatedWeeks: 2,
+          topics: [
+            { topicId: "top-do-01", title: "Linux System Internals, Permissions & Bash", description: "Automate server maintenance with robust scripts." },
+            { topicId: "top-do-02", title: "Networking Fundamentals, DNS, SSL & Reverse Proxies", description: "Configure Nginx and Caddy for high availability." },
+          ],
+        },
+        {
+          phaseId: "do-p2",
+          title: "Docker Containerization & Compose",
+          description: "Multi-stage builds, non-root user security, and multi-service orchestration with Docker Compose.",
+          estimatedWeeks: 3,
+          topics: [
+            { topicId: "top-do-03", title: "Multi-Stage Dockerfiles & Image Optimization", description: "Shrink image footprints by up to 80%." },
+            { topicId: "top-do-04", title: "Docker Compose Multi-Container Stacks", description: "Orchestrate API, Redis, and DB dependencies." },
+          ],
+        },
+        {
+          phaseId: "do-p3",
+          title: "Kubernetes Cluster Architecture & Helm",
+          description: "Pods, Deployments, Services, Ingress, PersistentVolumes, and Helm package charts.",
+          estimatedWeeks: 3,
+          topics: [
+            { topicId: "top-do-05", title: "K8s Pods, Deployments, ConfigMaps & Secrets", description: "Manage declarative cluster workloads." },
+            { topicId: "top-do-06", title: "Ingress Controllers & Cert-Manager", description: "Expose microservices securely over TLS." },
+            { topicId: "top-do-07", title: "Helm Package Charts & Values Customization", description: "Template complex cluster applications." },
+          ],
+        },
+        {
+          phaseId: "do-p4",
+          title: "CI/CD Pipelines & GitOps Deployment",
+          description: "GitHub Actions automated testing, Docker build & push, and ArgoCD GitOps sync.",
+          estimatedWeeks: 2,
+          topics: [
+            { topicId: "top-do-08", title: "GitHub Actions CI/CD Automation", description: "Run automated tests and container builds on PRs." },
+            { topicId: "top-do-09", title: "ArgoCD GitOps Zero-Downtime Releases", description: "Continuous synchronization from Git to Kubernetes." },
+          ],
+        },
+      ],
+    };
+  }
+
+  if (lower.includes("python") || lower.includes("data") || lower.includes("backend") || lower.includes("fastapi")) {
+    return {
+      objective: "Python Backend & High-Performance Microservices Roadmap",
+      currentAssessment: "Master Python 3.12, FastAPI, AsyncIO, PostgreSQL, Redis caching, and scalable REST/gRPC architectures.",
+      totalEstimatedWeeks: 10,
+      phases: [
+        {
+          phaseId: "py-p1",
+          title: "Modern Python 3.12 & AsyncIO",
+          description: "Type annotations, dataclasses, generators, and asynchronous concurrency with asyncio.",
+          estimatedWeeks: 2,
+          topics: [
+            { topicId: "top-py-01", title: "Type Hinting, Generics & Pydantic V2", description: "High-performance schema validation in Python." },
+            { topicId: "top-py-02", title: "AsyncIO Event Loop & Task Concurrency", description: "Handle thousands of concurrent I/O operations." },
+          ],
+        },
+        {
+          phaseId: "py-p2",
+          title: "FastAPI & Enterprise REST APIs",
+          description: "Dependency injection, OAuth2 JWT auth, background tasks, and OpenAPI documentation.",
+          estimatedWeeks: 3,
+          topics: [
+            { topicId: "top-py-03", title: "FastAPI Dependency Injection & Middleware", description: "Decouple database sessions and auth handlers." },
+            { topicId: "top-py-04", title: "SQLAlchemy 2.0 Async ORM & Alembic Migrations", description: "Type-safe database modeling with PostgreSQL." },
+          ],
+        },
+        {
+          phaseId: "py-p3",
+          title: "Caching, Queues & Distributed Tasks",
+          description: "Redis caching, Celery task workers, message brokers, and background jobs.",
+          estimatedWeeks: 3,
+          topics: [
+            { topicId: "top-py-05", title: "Redis Caching Strategies & Rate Limiting", description: "Accelerate read endpoints and protect APIs." },
+            { topicId: "top-py-06", title: "Celery & RabbitMQ Asynchronous Job Processing", description: "Offload compute-heavy tasks to worker pools." },
+          ],
+        },
+        {
+          phaseId: "py-p4",
+          title: "Production Microservices Capstone",
+          description: "Build an end-to-end distributed order processing service with automated test coverage.",
+          estimatedWeeks: 2,
+          topics: [
+            { topicId: "top-py-07", title: "PyTest Suite with Mocking & Coverage", description: "Achieve 90%+ test coverage with unit & integration tests." },
+            { topicId: "top-py-08", title: "Dockerized Production Microservice Capstone", description: "Deploy containerized FastAPI with health checks." },
+          ],
+        },
+      ],
+    };
+  }
+
+  // 5. Default Fallback
   return {
-    objective: "Frontend Engineering Roadmap",
-    currentAssessment: "Your personalized journey from foundation to career-ready, adapted by AI.",
-    totalEstimatedWeeks: 16,
+    objective: "Frontend Engineering & Modern UI Architecture Roadmap",
+    currentAssessment: "Your personalized journey from DOM & ECMAScript fundamentals to React 19, state stores, and scalable web architecture.",
+    totalEstimatedWeeks: 10,
     phases: [
       {
         phaseId: "phase-1",
-        title: "Foundation",
-        description: "HTML, CSS fundamentals & version control basics.",
-        estimatedWeeks: 3,
+        title: "Foundation & Modern ECMAScript",
+        description: "Semantic HTML5, CSS3 Grid & Flexbox, modern ES6+ async runtime, and Git branching workflows.",
+        estimatedWeeks: 2,
         topics: [
-          {
-            topicId: "topic-001",
-            title: "Semantic HTML",
-            description: "Accessible, SEO-friendly modern markup structure.",
-          },
-          {
-            topicId: "topic-002",
-            title: "CSS Layout & Flexbox",
-            description: "Responsive layouts, flexbox, CSS grid, and modern styling.",
-          },
-          {
-            topicId: "topic-003",
-            title: "Git & GitHub",
-            description: "Branching, merge requests, collaboration workflows.",
-          },
+          { topicId: "topic-001", title: "Semantic HTML5 & Accessible ARIA", description: "Accessible, SEO-friendly modern markup structure." },
+          { topicId: "topic-002", title: "CSS3 Flexbox, Grid & Responsive Layouts", description: "Responsive layouts, container queries, and CSS variables." },
+          { topicId: "topic-003", title: "Modern JavaScript (ES6+ Async/Await & Event Loop)", description: "Promises, microtasks, closures, and modular imports." },
+          { topicId: "topic-004", title: "Git Workflows & Clean Branching Strategy", description: "Merge conflicts, rebasing, and pull request reviews." },
         ],
       },
       {
         phaseId: "phase-2",
-        title: "Core",
-        description: "JavaScript, React & modern state management.",
-        estimatedWeeks: 5,
+        title: "Core React 19 & State Architecture",
+        description: "React 19 Hooks, Fiber diffing, Zustand state stores, and server state caching with TanStack Query.",
+        estimatedWeeks: 3,
         topics: [
-          {
-            topicId: "topic-004",
-            title: "JavaScript Deep Dive",
-            description: "ES6+, Async/Await, Closures, Event Loop & DOM APIs.",
-          },
-          {
-            topicId: "topic-005",
-            title: "React Fundamentals",
-            description: "Components, hooks, props, lifecycle & virtual DOM.",
-          },
-          {
-            topicId: "topic-006",
-            title: "State Management",
-            description: "Context API, Zustand, Redux Toolkit & data caching.",
-          },
+          { topicId: "topic-005", title: "React 19 Hooks, Fiber Diffing & Virtual DOM", description: "Component lifecycles and optimized rendering." },
+          { topicId: "topic-006", title: "Zustand & Persistent State Stores", description: "Atomic decoupled global state without boilerplates." },
+          { topicId: "topic-007", title: "Server State Caching with TanStack Query", description: "Optimistic updates, background caching, and invalidation." },
+          { topicId: "topic-008", title: "TypeScript Generics & React Component Typing", description: "Type-safe props, event handlers, and custom hooks." },
+        ],
+      },
+      {
+        phaseId: "phase-3",
+        title: "Advanced Performance & Microfrontends",
+        description: "Core Web Vitals, code splitting, bundle optimizations, and automated testing with Vitest & Playwright.",
+        estimatedWeeks: 3,
+        topics: [
+          { topicId: "topic-009", title: "Core Web Vitals & Bundle Optimization", description: "LCP, FID, CLS improvements, and tree shaking." },
+          { topicId: "topic-010", title: "Automated Testing with Vitest & Playwright", description: "Unit tests, component rendering tests, and E2E specs." },
+          { topicId: "topic-011", title: "Component Design Systems with Tailwind & Radix", description: "Composable, headless UI primitives and design tokens." },
+        ],
+      },
+      {
+        phaseId: "phase-4",
+        title: "Production Projects & Capstones",
+        description: "Assemble portfolio-grade production web apps and verify your frontend competency.",
+        estimatedWeeks: 2,
+        topics: [
+          { topicId: "topic-012", title: "High-Throughput Analytics Dashboard", description: "Live charts, websocket streaming, and virtualized tables." },
+          { topicId: "topic-013", title: "Real-time Collaborative Canvas App", description: "Multiplayer editing, undo/redo stacks, and SVG canvas." },
         ],
       },
     ],

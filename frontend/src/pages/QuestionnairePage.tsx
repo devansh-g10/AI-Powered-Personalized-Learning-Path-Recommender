@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { contextApi, roadmapApi, conversationsApi } from "@/lib/api";
+import { dispatchProgressUpdate } from "@/lib/learning-data";
 
 const popularGoalPresets = [
   {
@@ -253,33 +254,41 @@ export default function QuestionnairePage() {
     // Save context locally
     localStorage.setItem(`context_${activeConvId}`, JSON.stringify(contextPayload));
 
+    let roadmapResult: any = null;
+
     try {
       await contextApi.save(activeConvId, contextPayload);
       setStatusMessage("AI is designing your custom learning roadmap...");
       const { data } = await roadmapApi.generate(activeConvId);
       if (data?.roadmap) {
-        const roadmapObj = data.roadmap.rawJson || data.roadmap;
-        localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(roadmapObj));
+        roadmapResult = data.roadmap.rawJson || data.roadmap;
+        localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(roadmapResult));
       }
     } catch {
       // Offline fallback: generate structured custom roadmap
-      const generated = generateOfflineCustomRoadmap();
-      localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(generated));
-
-      // Add to local conversations list in dashboard
-      const existingList = JSON.parse(localStorage.getItem("local_conversations") || "[]");
-      const newConv = {
-        id: activeConvId,
-        title: learningGoal.trim(),
-        status: "ACTIVE",
-        createdAt: new Date().toISOString(),
-        progress: 0,
-        category: "Custom Path",
-        learningContext: contextPayload,
-        roadmap: generated,
-      };
-      localStorage.setItem("local_conversations", JSON.stringify([newConv, ...existingList]));
+      roadmapResult = generateOfflineCustomRoadmap();
+      localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(roadmapResult));
     }
+
+    // Always ensure local conversation record exists for immediate dashboard sync
+    const category = targetOutcome?.includes("Job") ? "Career Path" : targetOutcome?.includes("Agent") || learningGoal?.toLowerCase().includes("ai") ? "AI & Full-Stack" : "Custom Path";
+    const existingList = JSON.parse(localStorage.getItem("local_conversations") || "[]").filter((c: any) => c.id !== activeConvId);
+    const newConv = {
+      id: activeConvId,
+      title: learningGoal.trim() || "My Learning Path",
+      status: "ACTIVE",
+      createdAt: new Date().toISOString(),
+      progress: 0,
+      category,
+      learningContext: contextPayload,
+      roadmap: roadmapResult,
+    };
+    localStorage.setItem("local_conversations", JSON.stringify([newConv, ...existingList]));
+
+    dispatchProgressUpdate({
+      action: "learning_path_created",
+      pathId: activeConvId,
+    });
 
     // Navigate to the newly crafted roadmap
     setTimeout(() => {

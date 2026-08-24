@@ -62,9 +62,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md px-6">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          <div className="size-10 shadow-lg shadow-[#2b7fff]/30 rounded-xl bg-[#2b7fff] text-blue-50 flex justify-center items-center">
-            <Route className="size-5" />
-          </div>
+          <Route className="size-7 text-[#2b7fff] stroke-[2.5]" />
           <span className="font-bold text-xl tracking-tight">PathAI</span>
         </div>
 

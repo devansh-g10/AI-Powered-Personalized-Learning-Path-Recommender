@@ -12,34 +12,50 @@ import {
   HelpCircle,
   RefreshCw,
   Loader2,
-  Send,
   X,
   Share2,
   CheckCircle2,
   Download,
   ArrowRight,
   Compass,
+  ChevronDown,
+  Plus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { roadmapApi, topicApi } from "@/lib/api";
-import { dispatchProgressUpdate } from "@/lib/learning-data";
+import { dispatchProgressUpdate, subscribeToProgressUpdates } from "@/lib/learning-data";
 import {
   getRoadmapForCourseOrId,
   getCourseByIdOrSlug,
+  allCoursesCatalog,
   type CourseRoadmapData,
   type RoadmapTopic,
 } from "@/lib/courses-data";
 
 const phaseIcons = [Check, Zap, Layers, FolderGit2, Trophy];
+
+function getUserPathsFromStorage(): { id: string; title: string; category?: string }[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem("local_conversations");
+    if (stored) {
+      const convs = JSON.parse(stored);
+      if (Array.isArray(convs)) {
+        return convs
+          .filter((c: any) => c && c.id && c.title)
+          .map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            category: c.category || "AI Learning Path",
+          }));
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
 
 export default function RoadmapPage() {
   const { id: routeConvId, courseId: routeCourseId } = useParams<{ id?: string; courseId?: string }>();
@@ -47,25 +63,61 @@ export default function RoadmapPage() {
   const queryCourseId = searchParams.get("courseId") || searchParams.get("course");
   const navigate = useNavigate();
 
+  // User's custom learning paths from localStorage (reactive)
+  const [userPaths, setUserPaths] = useState<{ id: string; title: string; category?: string }[]>(() => {
+    return getUserPathsFromStorage();
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setUserPaths(getUserPathsFromStorage());
+    };
+    handleUpdate();
+    const unsubscribe = subscribeToProgressUpdates(handleUpdate);
+    return () => unsubscribe();
+  }, []);
+
   // Target Course or Conversation Identifier
   const activeTargetId = useMemo(() => {
-    return routeCourseId || queryCourseId || routeConvId || "default-roadmap";
-  }, [routeCourseId, queryCourseId, routeConvId]);
+    if (routeCourseId) return routeCourseId;
+    if (queryCourseId) return queryCourseId;
+    if (routeConvId) return routeConvId;
+
+    if (userPaths.length > 0 && userPaths[0]?.id) {
+      return userPaths[0].id;
+    }
+
+    // No target if user has no courses in dashboard
+    return null;
+  }, [routeCourseId, queryCourseId, routeConvId, userPaths]);
 
   // Read Course Metadata if this is a Course Roadmap
   const matchedCourse = useMemo(() => {
+    if (!activeTargetId) return undefined;
     return getCourseByIdOrSlug(activeTargetId);
   }, [activeTargetId]);
 
-  const [roadmap, setRoadmap] = useState<CourseRoadmapData>(() => {
+  // Quick curated featured paths for one-click pill jumping
+  const quickFeaturedPaths = useMemo(() => {
+    return [
+      { id: "docker-devops", shortLabel: "DevOps & K8s", isCourse: true },
+      { id: "typescript-mastery", shortLabel: "TypeScript Pro", isCourse: true },
+      { id: "react-19-development", shortLabel: "React 19", isCourse: true },
+      { id: "langchain-rag-agents", shortLabel: "AI Agents & RAG", isCourse: true },
+      { id: "nextjs-15-fullstack", shortLabel: "Next.js 15", isCourse: true },
+    ];
+  }, []);
+
+  const [roadmap, setRoadmap] = useState<CourseRoadmapData | null>(() => {
+    if (!activeTargetId) return null;
     return getRoadmapForCourseOrId(activeTargetId);
   });
 
   const [selectedPhaseIndex, setSelectedPhaseIndex] = useState(0);
   const [completedTopicIds, setCompletedTopicIds] = useState<Set<string>>(new Set());
-  const [justToggledTopicId, setJustToggledTopicId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isPathSelectorOpen, setIsPathSelectorOpen] = useState(false);
 
   // Topic Question Modal State
   const [activeQuestionTopic, setActiveQuestionTopic] = useState<RoadmapTopic | null>(null);
@@ -80,6 +132,11 @@ export default function RoadmapPage() {
 
   // ─── 1. Load Course-Specific Roadmap & Completed Milestones ─────────────────
   useEffect(() => {
+    if (!activeTargetId) {
+      setRoadmap(null);
+      return;
+    }
+
     // 1. Derive authentic course roadmap
     const courseRoadmap = getRoadmapForCourseOrId(activeTargetId);
     setRoadmap(courseRoadmap);
@@ -95,12 +152,7 @@ export default function RoadmapPage() {
         setCompletedTopicIds(new Set());
       }
     } else {
-      // Default initial completed for default / react if fresh
-      if (activeTargetId === "default-roadmap" || activeTargetId === "fe-roadmap-01" || activeTargetId === "react-19-development") {
-        setCompletedTopicIds(new Set(["topic-001", "topic-002", "m-react-101"]));
-      } else {
-        setCompletedTopicIds(new Set());
-      }
+      setCompletedTopicIds(new Set());
     }
 
     // 3. If remote conversation ID, try remote API
@@ -116,12 +168,12 @@ export default function RoadmapPage() {
           setIsLoading(true);
           const { data } = await roadmapApi.get(routeConvId);
           const rData = data.roadmap?.rawJson || data.roadmap;
-          if (rData && rData.phases) {
+          if (rData && rData.phases && rData.phases.length > 0) {
             setRoadmap(rData);
             localStorage.setItem(`roadmap_${activeTargetId}`, JSON.stringify(rData));
           }
         } catch {
-          // offline
+          // offline fallback
         } finally {
           setIsLoading(false);
         }
@@ -132,6 +184,7 @@ export default function RoadmapPage() {
 
   // ─── 2. Calculate Progress Metrics ──────────────────────────────────────────
   const allTopics = useMemo(() => {
+    if (!roadmap?.phases) return [];
     return roadmap.phases.flatMap((p) => p.topics);
   }, [roadmap]);
 
@@ -140,13 +193,19 @@ export default function RoadmapPage() {
   const progressPercent = Math.round((completedCount / totalTopicCount) * 100);
 
   // Connector Line Fill Height
-  const phaseProgressValues = roadmap.phases.map((phase) => {
-    const pTopics = phase.topics;
-    const done = pTopics.filter((t) => completedTopicIds.has(t.topicId)).length;
-    return pTopics.length > 0 ? done / pTopics.length : 0;
-  });
+  const phaseProgressValues = useMemo(() => {
+    if (!roadmap?.phases) return [];
+    return roadmap.phases.map((phase) => {
+      const pTopics = phase.topics;
+      const done = pTopics.filter((t) => completedTopicIds.has(t.topicId)).length;
+      return pTopics.length > 0 ? done / pTopics.length : 0;
+    });
+  }, [roadmap, completedTopicIds]);
+
   const avgPhaseCompletion =
-    phaseProgressValues.reduce((a, b) => a + b, 0) / (phaseProgressValues.length || 1);
+    phaseProgressValues.length > 0
+      ? phaseProgressValues.reduce((a, b) => a + b, 0) / phaseProgressValues.length
+      : 0;
   const connectorLineFillPercent = Math.min(100, Math.max(10, Math.round(avgPhaseCompletion * 100)));
 
   // ─── 3. Toggle Topic Milestone ──────────────────────────────────────────────
@@ -159,9 +218,6 @@ export default function RoadmapPage() {
       } else {
         next.add(topicId);
       }
-      setJustToggledTopicId(topicId);
-      setTimeout(() => setJustToggledTopicId(null), 1200);
-
       // Save course-scoped storage
       const storageKey = `completed_topics_${activeTargetId}`;
       localStorage.setItem(storageKey, JSON.stringify(Array.from(next)));
@@ -183,8 +239,9 @@ export default function RoadmapPage() {
     });
   };
 
-  const safePhaseIndex = Math.min(selectedPhaseIndex, Math.max(0, roadmap.phases.length - 1));
-  const currentSelectedPhase = roadmap.phases[safePhaseIndex] || roadmap.phases[0] || {
+  const phasesList = roadmap?.phases || [];
+  const safePhaseIndex = Math.min(selectedPhaseIndex, Math.max(0, phasesList.length - 1));
+  const currentSelectedPhase = phasesList[safePhaseIndex] || phasesList[0] || {
     phaseId: "p0",
     title: "Overview",
     description: "Milestones overview",
@@ -234,43 +291,54 @@ export default function RoadmapPage() {
         const { data } = await roadmapApi.generate(routeConvId, modifyPrompt);
         if (data.roadmap?.rawJson) {
           setRoadmap(data.roadmap.rawJson);
-          localStorage.setItem(`roadmap_${activeTargetId}`, JSON.stringify(data.roadmap.rawJson));
+          if (activeTargetId) {
+            localStorage.setItem(`roadmap_${activeTargetId}`, JSON.stringify(data.roadmap.rawJson));
+          }
           setIsModifying(false);
           setModifyPrompt("");
           setIsSubmittingMod(false);
           return;
         }
       }
+
+      // Offline local update: inject new requested milestone into selected phase
+      await new Promise((r) => setTimeout(r, 500));
+      if (roadmap && roadmap.phases && roadmap.phases.length > 0) {
+        const updated = { ...roadmap };
+        const targetPhase = updated.phases[safePhaseIndex] || updated.phases[0];
+        targetPhase.topics.push({
+          topicId: `custom-topic-${Date.now()}`,
+          title: modifyPrompt.trim(),
+          description: "Custom AI-tailored milestone added via roadmap modification.",
+          completed: false,
+        });
+        setRoadmap(updated);
+        if (activeTargetId) {
+          localStorage.setItem(`roadmap_${activeTargetId}`, JSON.stringify(updated));
+        }
+      }
+      setIsModifying(false);
+      setModifyPrompt("");
     } catch {
-      // offline
+      // ignore
+    } finally {
+      setIsSubmittingMod(false);
     }
-
-    const updatedPhases = [...roadmap.phases];
-    if (updatedPhases[0]) {
-      updatedPhases[0].topics.push({
-        topicId: `custom-top-${Date.now().toString().slice(-4)}`,
-        title: `Custom Goal: ${modifyPrompt.slice(0, 30)}...`,
-        description: `Adapted milestone: ${modifyPrompt}`,
-        completed: false,
-      });
-    }
-
-    const modified = { ...roadmap, phases: updatedPhases };
-    setRoadmap(modified);
-    localStorage.setItem(`roadmap_${activeTargetId}`, JSON.stringify(modified));
-    setIsModifying(false);
-    setModifyPrompt("");
-    setIsSubmittingMod(false);
   };
 
   const handleExportRoadmap = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(roadmap, null, 2));
-    const downloadAnchor = document.createElement("a");
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `${roadmap.objective.toLowerCase().replace(/\s+/g, "-")}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    if (!roadmap) return;
+    const blob = new Blob([JSON.stringify(roadmap, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(roadmap.objective || "learning-roadmap")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleShareLink = () => {
@@ -280,7 +348,7 @@ export default function RoadmapPage() {
   };
 
   const getPhaseStatus = (index: number) => {
-    const phase = roadmap.phases[index];
+    const phase = phasesList[index];
     if (!phase) return { label: "Upcoming", variant: "upcoming" };
     const topicsInPhase = phase.topics;
     const finished = topicsInPhase.filter((t) => completedTopicIds.has(t.topicId)).length;
@@ -294,23 +362,222 @@ export default function RoadmapPage() {
     return { label: "Upcoming", variant: "upcoming" };
   };
 
+  // ─── 0. Empty State (When user has 0 learning paths / courses in dashboard) ───
+  if (!activeTargetId || !roadmap || phasesList.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-5 max-w-lg mx-auto py-16 px-4">
+        <div className="size-16 rounded-3xl bg-blue-50 text-[#2b7fff] flex items-center justify-center">
+          <Layers className="size-8 stroke-[2]" />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <h2 className="font-display font-bold text-2xl text-zinc-950">
+            No Active Roadmap Found
+          </h2>
+          <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed">
+            You don't have any learning paths in your dashboard. Create an AI-personalized roadmap or explore courses to get started.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 w-full justify-center">
+          <Button
+            onClick={() => navigate("/questionnaire")}
+            className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#2b7fff] hover:bg-[#2563eb] text-white font-bold text-xs gap-2 cursor-pointer border-0 shadow-sm"
+          >
+            <Sparkles className="size-4" />
+            <span>Create Learning Path with AI</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => navigate("/courses")}
+            className="w-full sm:w-auto h-11 px-6 rounded-xl border-zinc-200 text-zinc-700 hover:bg-zinc-50 font-semibold text-xs gap-2 cursor-pointer"
+          >
+            <Compass className="size-4 text-[#2b7fff]" />
+            <span>Browse Courses</span>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-8 pb-16 w-full max-w-7xl mx-auto">
+    <div className="flex flex-col gap-6 pb-16 w-full max-w-7xl mx-auto">
+      {/* ─── 0. Path Selector Bar ───────────────────── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative z-30">
+        {/* Dropdown Menu Trigger */}
+        <div className="relative w-full sm:w-auto">
+          <button
+            onClick={() => setIsPathSelectorOpen((prev) => !prev)}
+            className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2.5 px-3.5 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-100 text-zinc-900 transition-colors cursor-pointer group text-xs font-bold border-0"
+          >
+            <div className="flex items-center gap-2 truncate">
+              <div className="size-6 rounded-lg bg-[#2b7fff]/10 text-[#2b7fff] flex items-center justify-center shrink-0">
+                <Layers className="size-3.5" />
+              </div>
+              <span className="text-zinc-500 font-normal hidden md:inline">Roadmap:</span>
+              <span className="font-extrabold text-zinc-950 max-w-[200px] sm:max-w-[260px] truncate text-left">
+                {roadmap.objective}
+              </span>
+            </div>
+            <ChevronDown
+              className={`size-4 text-zinc-400 group-hover:text-zinc-800 transition-transform duration-200 shrink-0 ${isPathSelectorOpen ? "rotate-180" : ""
+                }`}
+            />
+          </button>
+
+          {/* Interactive Modal Dropdown */}
+          <AnimatePresence>
+            {isPathSelectorOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40 bg-black/10 backdrop-blur-2xs"
+                  onClick={() => setIsPathSelectorOpen(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                  transition={{ duration: 0.18 }}
+                  className="absolute left-0 top-full mt-2 w-full sm:w-96 rounded-2xl bg-white shadow-2xl border border-zinc-200/90 p-3.5 z-50 flex flex-col gap-2.5 max-h-[400px] overflow-y-auto [scrollbar-width:thin]"
+                >
+                  {/* User Paths Section */}
+                  {userPaths.length > 0 && (
+                    <>
+                      <div className="text-[10px] uppercase font-extrabold text-zinc-400 tracking-wider px-2 pt-1 flex items-center justify-between">
+                        <span>Your Learning Paths</span>
+                        <span className="text-[#2b7fff] font-bold">{userPaths.length} Active</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {userPaths.map((p) => {
+                          const isCurrent = activeTargetId === p.id;
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => {
+                                navigate(`/conversations/${p.id}/roadmap`);
+                                setIsPathSelectorOpen(false);
+                              }}
+                              className={`flex items-center justify-between p-2.5 rounded-xl transition-colors text-left group cursor-pointer border-0 ${isCurrent
+                                  ? "bg-blue-50 text-[#2b7fff]"
+                                  : "hover:bg-zinc-50 text-zinc-800 bg-transparent"
+                                }`}
+                            >
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-xs font-bold group-hover:text-[#2b7fff] line-clamp-1">
+                                  {p.title}
+                                </span>
+                                <span className="text-[10px] text-zinc-500 font-medium">{p.category}</span>
+                              </div>
+                              {isCurrent && (
+                                <Badge className="bg-[#2b7fff] text-white text-[10px] px-2 py-0.5 font-bold">
+                                  Active
+                                </Badge>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Curated Catalog Roadmaps */}
+                  <div className="text-[10px] uppercase font-extrabold text-zinc-400 tracking-wider px-2 pt-2 border-t border-zinc-100 flex items-center justify-between">
+                    <span>Curated Engineering Roadmaps</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {allCoursesCatalog.slice(0, 6).map((c) => {
+                      const isCurrent = activeTargetId === c.slug || activeTargetId === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            navigate(`/roadmap/${c.slug}`);
+                            setIsPathSelectorOpen(false);
+                          }}
+                          className={`flex items-center justify-between p-2.5 rounded-xl transition-colors text-left group cursor-pointer border-0 ${isCurrent
+                              ? "bg-blue-50 text-[#2b7fff]"
+                              : "hover:bg-zinc-50 text-zinc-800 bg-transparent"
+                            }`}
+                        >
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-bold group-hover:text-blue-600 line-clamp-1">
+                              {c.title}
+                            </span>
+                            <span className="text-[10px] text-zinc-500 font-medium">
+                              {c.category} • {c.estimatedWeeks} wks
+                            </span>
+                          </div>
+                          {isCurrent && (
+                            <Badge className="bg-[#2b7fff] text-white text-[10px] px-2 py-0.5 font-bold">
+                              Active
+                            </Badge>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Create New Path Action */}
+                  <div className="pt-2 border-t border-zinc-100">
+                    <button
+                      onClick={() => {
+                        setIsPathSelectorOpen(false);
+                        navigate("/questionnaire");
+                      }}
+                      className="w-full py-2 px-4 rounded-xl bg-[#2b7fff] hover:bg-[#2563eb] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer border-0"
+                    >
+                      <Plus className="size-3.5" />
+                      Craft New Learning Path with AI
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Quick Horizontal Filter Pills (Scrollbar strictly hidden) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden w-full sm:w-auto pb-0.5">
+          <span className="text-[11px] font-bold text-zinc-400 shrink-0 uppercase tracking-wider hidden lg:inline mr-1">
+            Quick Jump:
+          </span>
+          {quickFeaturedPaths.map((item) => {
+            const isActive = activeTargetId === item.id || (matchedCourse && matchedCourse.slug === item.id);
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  if (item.isCourse) navigate(`/roadmap/${item.id}`);
+                  else navigate(`/conversations/${item.id}/roadmap`);
+                }}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 ${isActive
+                    ? "bg-[#2b7fff] text-white font-extrabold shadow-xs"
+                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200/80 hover:text-zinc-900"
+                  }`}
+              >
+                {item.shortLabel}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* ─── 1. Header Section ────────────────────────────────────────────── */}
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4"
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col md:flex-row justify-between items-start md:items-end gap-5 py-2"
       >
-        <div className="flex flex-col gap-2 max-w-3xl">
+        <div className="flex flex-col gap-2.5 max-w-3xl">
           <div className="flex items-center gap-2 flex-wrap">
             <Badge
               variant="secondary"
-              className="font-semibold rounded-full bg-[#2b7fff]/10 text-[#2b7fff] text-xs px-3 py-1 gap-1.5 w-fit border border-[#2b7fff]/20"
+              className="font-bold rounded-full bg-[#2b7fff]/10 text-[#2b7fff] text-xs px-3 py-1 gap-1.5 w-fit border-0"
             >
               <Sparkles className="size-3.5" />
-              {matchedCourse ? `${matchedCourse.category} Roadmap` : "AI-Generated Learning Roadmap"}
+              {matchedCourse ? `${matchedCourse.category} Roadmap` : "AI Personalized Learning Path"}
             </Badge>
 
             {matchedCourse && (
@@ -366,14 +633,14 @@ export default function RoadmapPage() {
         </div>
 
         {/* Overall Progress Widget */}
-        <div className="flex flex-col items-start md:items-end gap-2 w-full md:w-auto shrink-0">
-          <span className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">
+        <div className="flex flex-col items-start md:items-end gap-1.5 w-full md:w-auto shrink-0">
+          <span className="text-zinc-400 text-xs font-bold uppercase tracking-wider">
             Roadmap Mastery
           </span>
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="w-full md:w-44 h-3 bg-zinc-100 rounded-full overflow-hidden border border-zinc-200/80 p-0.5 shadow-inner">
+            <div className="w-full md:w-44 h-2.5 bg-zinc-100 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-[#2b7fff] to-[#2563eb] rounded-full shadow-sm"
+                className="h-full bg-[#2b7fff] rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -389,6 +656,9 @@ export default function RoadmapPage() {
               {progressPercent}%
             </motion.span>
           </div>
+          <span className="text-[11px] text-zinc-400 font-medium">
+            {completedCount} of {totalTopicCount} verified milestones
+          </span>
         </div>
       </motion.div>
 
@@ -400,334 +670,276 @@ export default function RoadmapPage() {
       )}
 
       {/* ─── 2. Main Grid Layout ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12 pt-2">
         {/* Left Column: Learning Stages Timeline (2 Cols) */}
-        <div className="lg:col-span-2 flex flex-col">
-          <Card className="glass-card backdrop-blur-xl shadow-xl shadow-[#2b7fff]/5 bg-white/80 border-zinc-200/80 p-6 md:p-8 rounded-3xl gap-6">
-            <CardHeader className="p-0 gap-1 mb-6">
-              <CardTitle className="font-display font-bold text-lg leading-7 text-zinc-950">
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display font-bold text-xl text-zinc-950">
                 Learning Stages
-              </CardTitle>
-              <CardDescription className="text-xs sm:text-sm text-zinc-600">
-                Follow the connected path. Click any stage to view its milestones.
-              </CardDescription>
-            </CardHeader>
+              </h2>
+              <span className="text-xs font-bold text-zinc-400">
+                {roadmap.phases.length} Total Stages
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-zinc-500">
+              Follow the connected path. Click any stage to view its milestones.
+            </p>
+          </div>
 
-            <CardContent className="p-0 gap-0">
-              <div className="relative flex flex-col">
-                {/* Vertical Connector Line */}
-                <div className="bg-zinc-200/90 absolute left-[27px] top-7 bottom-7 w-1 rounded-full" />
-                <motion.div
-                  className="bg-gradient-to-b from-[#2b7fff] via-[#3b82f6] to-[#2563eb] absolute left-[27px] top-7 w-1 rounded-full origin-top shadow-[0_0_12px_rgba(43,127,255,0.6)]"
-                  initial={{ height: 0 }}
-                  animate={{ height: `${connectorLineFillPercent}%` }}
-                  transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-                />
+          <div className="relative flex flex-col">
+            {/* Vertical Connector Line */}
+            <div className="bg-zinc-200 absolute left-[27px] top-7 bottom-7 w-1 rounded-full" />
+            <motion.div
+              className="bg-[#2b7fff] absolute left-[27px] top-7 w-1 rounded-full origin-top"
+              initial={{ height: 0 }}
+              animate={{ height: `${connectorLineFillPercent}%` }}
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            />
 
-                {/* Staggered Stage Nodes */}
-                <div className="flex flex-col gap-3">
-                  {roadmap.phases.map((phase, idx) => {
-                    const Icon = phaseIcons[idx % phaseIcons.length];
-                    const status = getPhaseStatus(idx);
-                    const isSelected = safePhaseIndex === idx;
-                    const isCompleted = status.variant === "completed";
-                    const isInProgress = status.variant === "in_progress";
+            {/* Staggered Stage Nodes */}
+            <div className="flex flex-col gap-3">
+              {roadmap.phases.map((phase, idx) => {
+                const Icon = phaseIcons[idx % phaseIcons.length];
+                const status = getPhaseStatus(idx);
+                const isSelected = safePhaseIndex === idx;
+                const isCompleted = status.variant === "completed";
+                const isInProgress = status.variant === "in_progress";
 
-                    const phaseTopics = phase.topics;
-                    const phaseDone = phaseTopics.filter((t) =>
-                      completedTopicIds.has(t.topicId)
-                    ).length;
-                    const phaseProgress =
-                      phaseTopics.length > 0
-                        ? Math.round((phaseDone / phaseTopics.length) * 100)
-                        : 0;
+                const phaseTopics = phase.topics;
+                const phaseDone = phaseTopics.filter((t) =>
+                  completedTopicIds.has(t.topicId)
+                ).length;
+                const phaseProgress =
+                  phaseTopics.length > 0
+                    ? Math.round((phaseDone / phaseTopics.length) * 100)
+                    : 0;
 
-                    return (
-                      <motion.button
-                        key={phase.phaseId || idx}
-                        onClick={() => setSelectedPhaseIndex(idx)}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{
-                          duration: 0.5,
-                          delay: idx * 0.08,
-                          ease: [0.16, 1, 0.3, 1],
-                        }}
-                        whileHover={{ y: -2, scale: 1.008, transition: { duration: 0.2 } }}
-                        whileTap={{ scale: 0.99 }}
-                        className={`relative text-left rounded-2xl flex p-4 items-start gap-4 cursor-pointer transition-all border ${
-                          isSelected
-                            ? "bg-white shadow-lg shadow-[#2b7fff]/10 border-[#2b7fff]/50 ring-2 ring-[#2b7fff]/20"
+                return (
+                  <motion.button
+                    key={phase.phaseId || idx}
+                    onClick={() => setSelectedPhaseIndex(idx)}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.45,
+                      delay: idx * 0.06,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                    whileHover={{ x: 2, transition: { duration: 0.2 } }}
+                    className={`relative text-left rounded-2xl flex p-4 items-start gap-4 cursor-pointer transition-all border-0 ${isSelected
+                        ? "bg-blue-50/70"
+                        : "hover:bg-zinc-50 bg-transparent"
+                      }`}
+                  >
+                    {/* Node Icon */}
+                    <div className="relative shrink-0 z-10">
+                      <div
+                        className={`size-12 rounded-full flex justify-center items-center transition-all ${isCompleted
+                            ? "bg-emerald-500 text-white"
                             : isInProgress
-                            ? "bg-white/90 border-[#2b7fff]/30 shadow-md shadow-[#2b7fff]/5"
-                            : "bg-white/60 border-zinc-200/70 hover:bg-white hover:border-zinc-300"
-                        }`}
+                              ? "bg-[#2b7fff] text-white"
+                              : "bg-zinc-100 text-zinc-400"
+                          }`}
                       >
-                        {/* Node Icon with Breathing Indicator */}
-                        <div className="relative shrink-0 z-10">
-                          {isInProgress && (
-                            <motion.div
-                              className="absolute -inset-1.5 rounded-full border-2 border-[#2b7fff] pointer-events-none"
-                              animate={{ scale: [1, 1.08, 1], opacity: [0.8, 0.3, 0.8] }}
-                              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                            />
-                          )}
+                        <Icon className="size-5" />
+                      </div>
+                    </div>
 
-                          <motion.div
-                            whileHover={{ scale: 1.06 }}
-                            transition={{ duration: 0.2 }}
-                            className={`size-14 rounded-full flex justify-center items-center transition-all ${
-                              isCompleted
-                                ? "shadow-md shadow-emerald-500/25 bg-emerald-500 text-white"
-                                : isInProgress
-                                ? "shadow-lg shadow-[#2b7fff]/40 bg-[#2b7fff] text-white ring-4 ring-[#2b7fff]/20"
-                                : "bg-zinc-100 text-zinc-500 border border-zinc-200"
+                    {/* Content */}
+                    <div className="flex pt-0.5 flex-col gap-1 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`font-display font-bold text-base ${!isCompleted && !isInProgress ? "text-zinc-600" : "text-zinc-950"
                             }`}
+                        >
+                          {phase.title}
+                        </span>
+
+                        {isCompleted ? (
+                          <Badge className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] px-2.5 py-0.5 border-0 flex items-center gap-1 font-bold">
+                            <CheckCircle2 className="size-3" /> Completed
+                          </Badge>
+                        ) : isInProgress ? (
+                          <Badge className="rounded-full bg-blue-100 text-[#2b7fff] text-[10px] px-2.5 py-0.5 border-0 font-bold flex items-center gap-1">
+                            <span className="size-1.5 rounded-full bg-[#2b7fff] animate-ping" />
+                            Current Focus
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="rounded-full text-[10px] px-2 py-0 text-zinc-400 bg-transparent border-0"
                           >
-                            <Icon className="size-6" />
-                          </motion.div>
-                        </div>
+                            Upcoming
+                          </Badge>
+                        )}
+                      </div>
 
-                        {/* Content */}
-                        <div className="flex pt-1 flex-col gap-1 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span
-                              className={`font-display font-bold text-base leading-6 ${
-                                !isCompleted && !isInProgress ? "text-zinc-600" : "text-zinc-950"
-                              }`}
-                            >
-                              {phase.title}
-                            </span>
+                      <p className="text-zinc-500 text-xs sm:text-sm leading-relaxed">
+                        {phase.description}
+                      </p>
 
-                            {isCompleted ? (
-                              <Badge className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] px-2.5 py-0.5 border-0 flex items-center gap-1 font-bold">
-                                <CheckCircle2 className="size-3" /> Completed
-                              </Badge>
-                            ) : isInProgress ? (
-                              <Badge className="rounded-full bg-[#2b7fff]/15 text-[#2b7fff] text-[10px] px-2.5 py-0.5 border-0 font-bold flex items-center gap-1">
-                                <span className="size-1.5 rounded-full bg-[#2b7fff] animate-ping" />
-                                Current Focus
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="outline"
-                                className="rounded-full text-[10px] px-2 py-0 text-zinc-400 bg-white"
-                              >
-                                Upcoming
-                              </Badge>
-                            )}
+                      {isInProgress && (
+                        <div className="mt-2 flex items-center gap-2.5">
+                          <div className="w-44 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full bg-[#2b7fff] rounded-full"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${phaseProgress}%` }}
+                              transition={{ duration: 0.6, ease: "easeOut" }}
+                            />
                           </div>
-
-                          <p className="text-zinc-600 text-xs sm:text-sm leading-relaxed">
-                            {phase.description}
-                          </p>
-
-                          {isInProgress && (
-                            <div className="mt-2 flex items-center gap-2.5">
-                              <div className="w-48 h-2 bg-zinc-100 rounded-full overflow-hidden border border-zinc-200/60 p-0.5">
-                                <motion.div
-                                  className="h-full bg-gradient-to-r from-[#2b7fff] to-[#2563eb] rounded-full"
-                                  initial={{ width: 0 }}
-                                  animate={{ width: `${phaseProgress}%` }}
-                                  transition={{ duration: 0.6, ease: "easeOut" }}
-                                />
-                              </div>
-                              <span className="text-xs font-bold text-[#2b7fff]">
-                                {phaseProgress}%
-                              </span>
-                            </div>
-                          )}
+                          <span className="text-xs font-bold text-[#2b7fff]">
+                            {phaseProgress}%
+                          </span>
                         </div>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                      )}
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* ─── Right Column: Stage Milestones Details ──────────────────────── */}
         <div className="lg:col-span-1 flex flex-col gap-6">
-          <Card className="glass-card backdrop-blur-xl shadow-xl shadow-[#2b7fff]/10 bg-white/85 border-zinc-200/80 p-6 rounded-3xl gap-4 flex flex-col">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={safePhaseIndex}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                className="flex flex-col gap-4"
-              >
-                <CardHeader className="p-0 gap-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <motion.div
-                        initial={{ scale: 0.8 }}
-                        animate={{ scale: 1 }}
-                        className={`size-9 rounded-xl flex justify-center items-center ${
-                          getPhaseStatus(safePhaseIndex).variant === "completed"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-[#2b7fff]/15 text-[#2b7fff]"
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={safePhaseIndex}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col gap-4"
+            >
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`size-8 rounded-lg flex justify-center items-center ${getPhaseStatus(safePhaseIndex).variant === "completed"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-blue-50 text-[#2b7fff]"
                         }`}
-                      >
-                        {getPhaseStatus(safePhaseIndex).variant === "completed" ? (
-                          <Check className="size-4" />
-                        ) : (
-                          <Zap className="size-4" />
-                        )}
-                      </motion.div>
-                      <CardTitle className="font-display font-bold text-base leading-6 text-zinc-950">
-                        {currentSelectedPhase.title}
-                      </CardTitle>
+                    >
+                      {getPhaseStatus(safePhaseIndex).variant === "completed" ? (
+                        <Check className="size-4" />
+                      ) : (
+                        <Zap className="size-4" />
+                      )}
                     </div>
-                    <Badge variant="outline" className="text-xs bg-white font-medium">
-                      {currentSelectedPhase.estimatedWeeks
-                        ? `${currentSelectedPhase.estimatedWeeks} wks`
-                        : "Stage"}
-                    </Badge>
+                    <h3 className="font-display font-bold text-base text-zinc-950">
+                      {currentSelectedPhase.title}
+                    </h3>
                   </div>
-                  <CardDescription className="text-xs text-zinc-600 leading-relaxed">
-                    Check off milestones as you complete them. Click the question icon to ask AI about any topic.
-                  </CardDescription>
-                </CardHeader>
+                  <span className="text-xs font-semibold text-zinc-400">
+                    {currentSelectedPhase.estimatedWeeks
+                      ? `${currentSelectedPhase.estimatedWeeks} wks`
+                      : "Stage"}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 leading-relaxed">
+                  Check off milestones as you complete them. Click the question icon to ask AI about any topic.
+                </p>
+              </div>
 
-                {/* Staggered Milestone Rows */}
-                <CardContent className="flex p-0 flex-col gap-2.5">
-                  {currentSelectedPhase.topics.length === 0 ? (
-                    <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-500 text-center">
-                      No milestones in this stage yet.
-                    </div>
-                  ) : (
-                    currentSelectedPhase.topics.map((topic, tIdx) => {
-                      const isChecked = completedTopicIds.has(topic.topicId);
-                      const isJustToggled = justToggledTopicId === topic.topicId;
+              {/* Staggered Milestone Rows */}
+              <div className="flex flex-col gap-1.5">
+                {currentSelectedPhase.topics.length === 0 ? (
+                  <div className="py-6 text-xs text-zinc-400 text-center">
+                    No milestones in this stage yet.
+                  </div>
+                ) : (
+                  currentSelectedPhase.topics.map((topic, tIdx) => {
+                    const isChecked = completedTopicIds.has(topic.topicId);
 
-                      return (
-                        <motion.div
-                          key={topic.topicId}
-                          initial={{ opacity: 0, y: 14 }}
-                          animate={{
-                            opacity: 1,
-                            y: 0,
-                            backgroundColor: isJustToggled && isChecked
-                              ? ["rgba(16,185,129,0.25)", "rgba(236,253,245,0.8)"]
-                              : isChecked
-                              ? "rgba(236,253,245,0.7)"
-                              : "rgba(244,244,245,0.7)",
-                          }}
-                          transition={{
-                            opacity: { duration: 0.35, delay: tIdx * 0.08 },
-                            y: { duration: 0.35, delay: tIdx * 0.08 },
-                            backgroundColor: { duration: 0.5 },
-                          }}
-                          whileHover={{
-                            y: -2,
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-                            backgroundColor: isChecked ? "rgba(236,253,245,0.9)" : "rgba(255,255,255,0.95)",
-                            transition: { duration: 0.18 },
-                          }}
-                          className={`group flex items-center justify-between rounded-xl p-3 text-xs sm:text-sm border transition-colors ${
-                            isChecked
-                              ? "border-emerald-200 text-emerald-950"
-                              : "border-zinc-200/80 text-zinc-800"
+                    return (
+                      <motion.div
+                        key={topic.topicId}
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          opacity: { duration: 0.35, delay: tIdx * 0.06 },
+                          y: { duration: 0.35, delay: tIdx * 0.06 },
+                        }}
+                        className={`group flex items-center justify-between rounded-xl px-3 py-2.5 text-xs sm:text-sm transition-colors ${isChecked
+                            ? "text-zinc-400 bg-emerald-50/40"
+                            : "text-zinc-800 hover:bg-zinc-50"
                           }`}
+                      >
+                        {/* Interactive Checkbox */}
+                        <div
+                          onClick={() => toggleTopic(topic.topicId)}
+                          className="flex items-center gap-3 cursor-pointer flex-1 select-none"
                         >
-                          {/* Interactive Checkbox */}
-                          <div
-                            onClick={() => toggleTopic(topic.topicId)}
-                            className="flex items-center gap-3 cursor-pointer flex-1 select-none"
-                          >
-                            <motion.div
-                              whileTap={{ scale: 0.85 }}
-                              className={`size-5 rounded-md flex items-center justify-center border transition-all ${
-                                isChecked
-                                ? "bg-[#2b7fff] border-[#2b7fff] text-white shadow-sm"
+                          <motion.div
+                            whileTap={{ scale: 0.85 }}
+                            className={`size-4.5 rounded-md flex items-center justify-center border transition-all ${isChecked
+                                ? "bg-[#2b7fff] border-[#2b7fff] text-white"
                                 : "bg-white border-zinc-300 group-hover:border-[#2b7fff]"
                               }`}
-                            >
-                              {isChecked && (
-                                <motion.div
-                                  initial={{ scale: 0, rotate: -25 }}
-                                  animate={{ scale: 1, rotate: 0 }}
-                                  transition={{ type: "spring", stiffness: 450, damping: 22 }}
-                                >
-                                  <Check className="size-3.5 stroke-[3]" />
-                                </motion.div>
-                              )}
-                            </motion.div>
-
-                            <span
-                              className={`font-semibold transition-all ${
-                                isChecked ? "line-through text-zinc-400 font-normal" : "text-zinc-900"
-                              }`}
-                            >
-                              {topic.title}
-                            </span>
-                          </div>
-
-                          {/* Ask AI Tutor Icon */}
-                          <motion.button
-                            type="button"
-                            title="Ask AI about this topic"
-                            whileHover={{ scale: 1.25, rotate: 15 }}
-                            whileTap={{ scale: 0.9 }}
-                            transition={{ duration: 0.15 }}
-                            onClick={() => {
-                              setActiveQuestionTopic(topic);
-                              setAiAnswer(null);
-                              setUserQuestion("");
-                            }}
-                            className="text-zinc-400 hover:text-[#2b7fff] p-1.5 rounded-lg hover:bg-white transition-colors bg-transparent border-0 cursor-pointer"
                           >
-                            <HelpCircle className="size-4" />
-                          </motion.button>
-                        </motion.div>
-                      );
-                    })
-                  )}
-                </CardContent>
+                            {isChecked && (
+                              <Check className="size-3 stroke-[3]" />
+                            )}
+                          </motion.div>
 
-                <CardFooter className="p-0 pt-2 flex flex-col gap-2">
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full">
-                    <Button
-                      onClick={() => {
-                        navigate(`/assistant?topic=${encodeURIComponent(currentSelectedPhase.title)}`);
-                      }}
-                      className="group bg-[#2b7fff] text-white hover:bg-[#2563eb] gap-2 w-full shadow-md shadow-[#2b7fff]/20 rounded-xl cursor-pointer h-11 text-xs font-bold transition-all"
-                    >
-                      <Play className="size-4" />
-                      <span>Continue Learning in Assistant</span>
-                      <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
-                    </Button>
-                  </motion.div>
-                </CardFooter>
-              </motion.div>
-            </AnimatePresence>
-          </Card>
+                          <span
+                            className={`font-medium transition-all ${isChecked ? "line-through text-zinc-400" : "text-zinc-900"
+                              }`}
+                          >
+                            {topic.title}
+                          </span>
+                        </div>
 
-          {/* AI Insight Card */}
-          <Card className="glass-card backdrop-blur-xl bg-[#2b7fff]/5 border border-[#2b7fff]/25 p-6 rounded-3xl gap-3 flex flex-col shadow-sm">
-            <CardHeader className="p-0 gap-2">
-              <div className="flex items-center gap-2">
-                <div className="size-7 rounded-lg bg-[#2b7fff]/10 text-[#2b7fff] flex items-center justify-center">
-                  <Sparkles className="size-3.5" />
-                </div>
-                <CardTitle className="font-display font-bold text-[#2b7fff] text-xs uppercase tracking-wider">
-                  PathAI Pacing Insight
-                </CardTitle>
+                        {/* Ask AI Tutor Icon */}
+                        <button
+                          type="button"
+                          title="Ask AI about this topic"
+                          onClick={() => {
+                            setActiveQuestionTopic(topic);
+                            setAiAnswer(null);
+                            setUserQuestion("");
+                          }}
+                          className="text-zinc-400 hover:text-[#2b7fff] p-1 rounded-lg transition-colors bg-transparent border-0 cursor-pointer"
+                        >
+                          <HelpCircle className="size-4" />
+                        </button>
+                      </motion.div>
+                    );
+                  })
+                )}
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <p className="text-zinc-800 text-xs sm:text-sm leading-relaxed font-medium">
-                {progressPercent >= 60
-                  ? `Outstanding velocity! You have completed over 60% of ${roadmap.objective}.`
-                  : progressPercent > 0
+
+              <div className="pt-2 flex flex-col gap-2">
+                <Button
+                  onClick={() => {
+                    navigate(`/assistant?topic=${encodeURIComponent(currentSelectedPhase.title)}`);
+                  }}
+                  className="group bg-[#2b7fff] text-white hover:bg-[#2563eb] gap-2 w-full rounded-xl cursor-pointer h-10 text-xs font-bold transition-all border-0"
+                >
+                  <Play className="size-4" />
+                  <span>Continue Learning in Assistant</span>
+                  <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+                </Button>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* AI Insight Section */}
+          <div className="flex flex-col gap-2 pt-2 border-t border-zinc-100">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#2b7fff] uppercase tracking-wider">
+              <Sparkles className="size-3.5" />
+              <span>PathAI Pacing Insight</span>
+            </div>
+            <p className="text-zinc-600 text-xs leading-relaxed">
+              {progressPercent >= 60
+                ? `Outstanding velocity! You have completed over 60% of ${roadmap.objective}.`
+                : progressPercent > 0
                   ? `You are steadily progressing through ${currentSelectedPhase.title}. Completing milestones keeps you on track.`
                   : `Start by checking off the foundation milestones for ${roadmap.objective}.`}
-              </p>
-            </CardContent>
-          </Card>
+            </p>
+          </div>
         </div>
       </div>
 
@@ -798,13 +1010,13 @@ export default function RoadmapPage() {
                     size="sm"
                     disabled={isAsking || !userQuestion.trim()}
                     onClick={handleAskQuestion}
-                    className="bg-[#2b7fff] text-white hover:bg-[#2563eb] text-xs font-semibold rounded-xl gap-1.5"
+                    className="bg-[#2b7fff] text-white hover:bg-[#2563eb] text-xs rounded-xl gap-1.5"
                   >
                     {isAsking ? (
                       <Loader2 className="size-3.5 animate-spin" />
                     ) : (
                       <>
-                        <Send className="size-3" />
+                        <Sparkles className="size-3.5" />
                         Ask AI
                       </>
                     )}
@@ -816,7 +1028,7 @@ export default function RoadmapPage() {
         )}
       </AnimatePresence>
 
-      {/* ─── Modify Roadmap Dialog ─────────────────────────────────────────── */}
+      {/* ─── Modify Roadmap Modal ──────────────────────────────────────────── */}
       <AnimatePresence>
         {isModifying && (
           <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
@@ -825,24 +1037,39 @@ export default function RoadmapPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.92, opacity: 0 }}
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-white rounded-3xl shadow-2xl border border-zinc-200 max-w-md w-full p-6 flex flex-col gap-4"
+              className="bg-white rounded-3xl shadow-2xl border border-zinc-200 max-w-lg w-full p-6 sm:p-7 flex flex-col gap-4"
             >
-              <div>
-                <h3 className="font-display font-bold text-lg text-zinc-950">Modify Learning Roadmap</h3>
-                <p className="text-xs text-zinc-500 leading-relaxed mt-1">
-                  Tell PathAI what topics to add, remove, or adapt to match your evolving goals.
-                </p>
+              <div className="flex items-start justify-between">
+                <div>
+                  <Badge
+                    variant="secondary"
+                    className="bg-[#2b7fff]/10 text-[#2b7fff] text-xs mb-1 font-semibold"
+                  >
+                    AI Roadmap Architect
+                  </Badge>
+                  <h3 className="font-display font-bold text-lg text-zinc-950">
+                    Modify Your Learning Roadmap
+                  </h3>
+                  <p className="text-xs text-zinc-500 leading-relaxed mt-0.5">
+                    Tell PathAI how you'd like to adjust stages, add specific technologies, or increase depth.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsModifying(false)}
+                  className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg bg-transparent border-0 cursor-pointer"
+                >
+                  <X className="size-5" />
+                </button>
               </div>
 
               <textarea
                 value={modifyPrompt}
                 onChange={(e) => setModifyPrompt(e.target.value)}
-                placeholder="e.g. Add deep dive into AST transforms and decorator metadata..."
-                rows={3}
-                className="w-full p-3 rounded-xl border border-zinc-200 bg-zinc-50 text-xs outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] resize-none"
+                placeholder="E.g., Add more focus on Docker & Kubernetes, include a real-world testing stage, or skip beginner HTML..."
+                className="w-full h-28 p-3.5 rounded-2xl border border-zinc-200 bg-zinc-50 text-xs outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] resize-none"
               />
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 pt-1">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -855,12 +1082,15 @@ export default function RoadmapPage() {
                   size="sm"
                   disabled={isSubmittingMod || !modifyPrompt.trim()}
                   onClick={handleModifyRoadmap}
-                  className="bg-[#2b7fff] text-white hover:bg-[#2563eb] text-xs font-semibold rounded-xl gap-1.5"
+                  className="bg-[#2b7fff] text-white hover:bg-[#2563eb] text-xs rounded-xl gap-1.5"
                 >
                   {isSubmittingMod ? (
                     <Loader2 className="size-3.5 animate-spin" />
                   ) : (
-                    "Apply Changes"
+                    <>
+                      <Sparkles className="size-3.5" />
+                      Regenerate Roadmap
+                    </>
                   )}
                 </Button>
               </div>

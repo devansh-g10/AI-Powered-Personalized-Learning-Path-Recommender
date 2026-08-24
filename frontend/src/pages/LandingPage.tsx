@@ -11,7 +11,6 @@ import {
   Compass,
   Award,
   BookOpen,
-  ChevronRight,
   ChevronDown,
   ShieldCheck,
   Terminal,
@@ -221,19 +220,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
         {/* Floating Decorative Chips (Desktop) */}
 
 
-        {/* Floating Frosted Pill */}
-        <RevealOnScroll delay={0.1} distance={15}>
-          <div className="glass-pill inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full text-xs font-semibold text-zinc-800 shadow-sm hover:scale-105 transition-transform cursor-default border border-white/90">
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2b7fff] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2b7fff]" />
-            </span>
-            <span className="text-zinc-600 font-medium">Next-Gen Personalized Engineering Platform</span>
-            <span className="text-[#2b7fff] font-bold flex items-center gap-0.5">
-              PathAI 2.0 <ChevronRight className="size-3.5" />
-            </span>
-          </div>
-        </RevealOnScroll>
+
 
         {/* Hero Title */}
         <div className="mx-auto max-w-5xl text-center">
@@ -915,20 +902,6 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
             </motion.div>
           </StaggerContainer>
 
-          {/* Elevated CTA Button */}
-          <div className="text-center pt-2 relative z-10 flex flex-col items-center gap-2">
-            <MagneticButton>
-              <Button
-                onClick={() => navigate("/conversations/new/questionnaire")}
-                className="bg-[#2b7fff] hover:bg-[#2563eb] text-white rounded-xl px-8 h-12 text-sm font-bold gap-2.5 shadow-[0_12px_28px_-6px_rgba(43,127,255,0.4)] cursor-pointer transition-all duration-300 hover:scale-105"
-              >
-                <Sparkles className="size-4" />
-                Start Your Learning Journey
-                <ArrowRight className="size-4" />
-              </Button>
-            </MagneticButton>
-
-          </div>
         </section>
       </RevealOnScroll>
 
@@ -1033,7 +1006,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html`,
 
       {/* ─── Premium Modern CTA Section ───────────────────────────────────── */}
       <RevealOnScroll distance={35} duration={0.6}>
-        <section className="relative rounded-[32px] sm:rounded-[40px] overflow-hidden p-8 sm:p-16 lg:p-20 bg-gradient-to-b from-white via-[#f8faff] to-[#f0f5ff] text-center flex flex-col items-center gap-8 sm:gap-10 border border-zinc-200/80 shadow-[0_20px_60px_-15px_rgba(43,127,255,0.08),0_1px_3px_rgba(0,0,0,0.02)] z-10 max-w-7xl mx-auto w-full">
+        <section className="relative text-center flex flex-col items-center gap-8 sm:gap-10 py-12 z-10 max-w-7xl mx-auto w-full">
           {/* 3 Extremely subtle ambient blurred gradient orbs */}
           <div
             ref={ctaBlobRef1}

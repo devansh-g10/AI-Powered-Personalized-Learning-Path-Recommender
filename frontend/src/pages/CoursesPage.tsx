@@ -55,8 +55,9 @@ export default function CoursesPage() {
   const enrolledProgressMap = useMemo(() => {
     const map: Record<string, number> = {};
     allCoursesCatalog.forEach((course) => {
-      const stored = localStorage.getItem(`completed_topics_${course.slug}`) ||
-                     localStorage.getItem(`completed_topics_${course.id}`);
+      const stored =
+        localStorage.getItem(`completed_topics_${course.slug}`) ||
+        localStorage.getItem(`completed_topics_${course.id}`);
       if (stored) {
         try {
           const completedSet = new Set(JSON.parse(stored));
@@ -111,163 +112,101 @@ export default function CoursesPage() {
     });
   }, [searchQuery, selectedCategory, activeTab, enrolledProgressMap]);
 
-  // Recommended list for highlight section
-  const recommendedCourses = useMemo(() => {
-    return allCoursesCatalog.filter((c) => c.isRecommended);
-  }, []);
-
   return (
-    <div className="flex flex-col gap-10 pb-20 w-full max-w-7xl mx-auto">
-      {/* ─── 1. Hero Header Experience ────────────────────────────────────── */}
-      <RevealOnScroll distance={20} duration={0.6}>
-        <div className="flex flex-col gap-5 pt-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge
-              variant="secondary"
-              className="font-semibold rounded-full bg-[#2b7fff]/10 text-[#2b7fff] text-xs px-3.5 py-1 gap-1.5 w-fit border border-[#2b7fff]/20"
-            >
-              <Sparkles className="size-3.5" />
-              AI-Curated Engineering Catalog
-            </Badge>
-
-            <span className="text-xs text-zinc-500 font-medium">
-              {allCoursesCatalog.length} Comprehensive Learning Programs
-            </span>
+    <div className="flex flex-col gap-4 pb-20 w-full max-w-7xl mx-auto -mt-3 sm:-mt-5">
+      {/* ─── 1. Top Navigation Bar with Status Tabs & Search ──────────────────── */}
+      <RevealOnScroll distance={8} duration={0.25}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-zinc-200/80 pb-0.5">
+          {/* Status Filter Tabs (All, Recommended, In Progress, Completed) */}
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden select-none">
+            {[
+              { id: "all", label: "All Programs" },
+              { id: "recommended", label: "✦ Recommended for You" },
+              { id: "in_progress", label: "In Progress" },
+              { id: "completed", label: "Completed" },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                  className={`relative px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                    isActive ? "text-[#2b7fff]" : "text-zinc-600 hover:text-zinc-950"
+                  }`}
+                >
+                  {tab.label}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeCoursesTab"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2b7fff] rounded-full"
+                      transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-            <div className="flex flex-col gap-2 max-w-3xl">
-              <h1 className="font-display font-bold text-3xl sm:text-4xl md:text-5xl text-zinc-950 tracking-tight leading-[1.15]">
-                Learn what moves your{" "}
-                <span className="text-[#2b7fff]">career forward.</span>
-              </h1>
-              <p className="text-zinc-600 text-sm sm:text-base leading-relaxed">
-                Explore structured engineering courses and let PathAI adapt the learning journey to your current skills, goals, and pace.
-              </p>
-            </div>
-
-            {/* Live Search Input */}
-            <div className="relative w-full md:w-80 shrink-0">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search React, Docker, AI, SQL..."
-                className="w-full h-11 pl-10 pr-4 rounded-2xl border border-zinc-200/90 bg-white text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] shadow-sm transition-all text-zinc-950 placeholder:text-zinc-400"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-zinc-700 bg-transparent border-0 cursor-pointer"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+          {/* Cleanly Aligned Search Bar on the Right */}
+          <div className="relative w-full md:w-80 shrink-0">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-zinc-400 transition-colors pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search React, Docker, AI, SQL..."
+              className="w-full h-9 pl-9 pr-9 rounded-xl border border-zinc-200/90 bg-white text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/25 focus:border-[#2b7fff] shadow-2xs hover:border-zinc-300 transition-all duration-200 text-zinc-950 placeholder:text-zinc-400"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400 hover:text-zinc-700 bg-transparent border-0 cursor-pointer p-1"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
       </RevealOnScroll>
 
-      {/* ─── 2. Filter Tabs & Category Bar ─────────────────────────────────── */}
-      <div className="flex flex-col gap-4">
-        {/* Status Filter Tabs (All, Recommended, In Progress) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 select-none border-b border-zinc-200/80">
-          {[
-            { id: "all", label: "All Programs" },
-            { id: "recommended", label: "✦ Recommended for You" },
-            { id: "in_progress", label: "In Progress" },
-            { id: "completed", label: "Completed" },
-          ].map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`relative px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                  isActive ? "text-[#2b7fff]" : "text-zinc-600 hover:text-zinc-950"
-                }`}
-              >
-                {tab.label}
-                {isActive && (
-                  <motion.div
-                    layoutId="activeCoursesTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2b7fff] rounded-full"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
+      {/* ─── 2. Clean Borderless Categories Bar ────────────────────────────── */}
+      <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-0.5 select-none">
+        <button
+          type="button"
+          onClick={() => setSelectedCategory("All")}
+          className={`px-3 py-1 rounded-full text-xs transition-all duration-150 cursor-pointer whitespace-nowrap ${
+            selectedCategory === "All"
+              ? "bg-[#2b7fff] text-white font-bold shadow-2xs"
+              : "text-zinc-600 hover:text-zinc-950 font-medium hover:bg-zinc-100/80 border-0 bg-transparent"
+          }`}
+        >
+          All Categories ({allCoursesCatalog.length})
+        </button>
 
-        {/* Categories Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 select-none">
-          <button
-            type="button"
-            onClick={() => setSelectedCategory("All")}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap border ${
-              selectedCategory === "All"
-                ? "bg-[#2b7fff] text-white border-[#2b7fff] shadow-sm shadow-[#2b7fff]/25"
-                : "bg-white text-zinc-700 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50"
-            }`}
-          >
-            All Categories ({allCoursesCatalog.length})
-          </button>
-
-          {courseCategoriesList.map((cat) => {
-            const isSelected = selectedCategory === cat.name;
-            const Icon = categoryIconMap[cat.name] || Code2;
-            return (
-              <button
-                key={cat.name}
-                type="button"
-                onClick={() => setSelectedCategory(cat.name)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap border ${
-                  isSelected
-                    ? "bg-[#2b7fff] text-white border-[#2b7fff] shadow-sm shadow-[#2b7fff]/25"
-                    : "bg-white text-zinc-700 border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50"
-                }`}
-              >
-                <Icon className="size-3.5" />
-                {cat.name}
-              </button>
-            );
-          })}
-        </div>
+        {courseCategoriesList.map((cat) => {
+          const isSelected = selectedCategory === cat.name;
+          const Icon = categoryIconMap[cat.name] || Code2;
+          return (
+            <button
+              key={cat.name}
+              type="button"
+              onClick={() => setSelectedCategory(cat.name)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-150 cursor-pointer whitespace-nowrap ${
+                isSelected
+                  ? "bg-[#2b7fff] text-white font-bold shadow-2xs"
+                  : "text-zinc-600 hover:text-zinc-950 font-medium hover:bg-zinc-100/80 border-0 bg-transparent"
+              }`}
+            >
+              <Icon className="size-3.5" />
+              {cat.name}
+            </button>
+          );
+        })}
       </div>
 
-      {/* ─── 3. Recommended For You Highlight Section ──────────────────────── */}
-      {activeTab === "all" && selectedCategory === "All" && !searchQuery && (
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="size-4 text-[#2b7fff]" />
-              <h2 className="font-display font-bold text-lg text-zinc-950">
-                Recommended for You
-              </h2>
-            </div>
-            <span className="text-xs text-zinc-500 font-medium">
-              Based on your active roadmap & verified competencies
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recommendedCourses.slice(0, 3).map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                progress={enrolledProgressMap[course.id]}
-                onSelect={() => navigate(`/courses/${course.slug}`)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ─── 4. Main Course Grid ───────────────────────────────────────────── */}
+      {/* ─── 3. Main Course Grid ───────────────────────────────────────────── */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="font-display font-bold text-lg text-zinc-950">
@@ -297,7 +236,7 @@ export default function CoursesPage() {
                 setSelectedCategory("All");
                 setActiveTab("all");
               }}
-              className="mt-2 text-xs rounded-xl"
+              className="mt-2 text-xs rounded-xl cursor-pointer"
             >
               Reset Filters
             </Button>
@@ -307,14 +246,20 @@ export default function CoursesPage() {
             layout
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
-            <AnimatePresence>
+            <AnimatePresence mode="popLayout">
               {filteredCourses.map((course, idx) => (
                 <motion.div
                   key={course.id}
-                  initial={{ opacity: 0, y: 15 }}
+                  layout
+                  initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.35, delay: idx * 0.04 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{
+                    duration: 0.24,
+                    delay: Math.min(0.2, idx * 0.03),
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  className="h-full"
                 >
                   <CourseCard
                     course={course}
@@ -346,21 +291,22 @@ function CourseCard({ course, progress, onSelect }: CourseCardProps) {
   return (
     <Card
       onClick={onSelect}
-      className="group glass-card backdrop-blur-xl bg-white/85 border-zinc-200/80 hover:border-[#2b7fff]/40 shadow-sm hover:shadow-xl hover:shadow-[#2b7fff]/8 rounded-3xl p-6 flex flex-col justify-between gap-5 transition-all duration-300 cursor-pointer hover:-translate-y-1"
+      className="group relative overflow-hidden backdrop-blur-xl bg-white/90 border border-zinc-200/80 hover:border-[#2b7fff]/40 shadow-xs hover:shadow-2xl hover:shadow-[#2b7fff]/15 rounded-3xl p-5 sm:p-6 flex flex-col justify-between h-full gap-4 transition-all duration-300 cursor-pointer hover:-translate-y-1.5"
     >
-      <CardHeader className="p-0 gap-3">
-        {/* Top Badges Row */}
+      <div className="pointer-events-none absolute -top-12 -right-12 size-32 bg-gradient-to-br from-[#2b7fff]/5 to-transparent rounded-full blur-2xl group-hover:bg-[#2b7fff]/15 transition-all duration-700 ease-out" />
+      <CardHeader className="p-0 gap-3 relative z-10">
+        {/* Category → Recommended Badge Row */}
         <div className="flex items-center justify-between gap-2">
           <Badge
             variant="outline"
-            className="text-[11px] font-semibold text-zinc-600 border-zinc-200/80 bg-zinc-50/80 flex items-center gap-1"
+            className="text-[11px] font-semibold text-zinc-600 border-zinc-200/80 bg-zinc-50/80 flex items-center gap-1.5"
           >
             <Icon className="size-3 text-[#2b7fff]" />
             {course.category}
           </Badge>
 
           {course.isRecommended && (
-            <Badge className="bg-[#2b7fff]/10 text-[#2b7fff] border-[#2b7fff]/20 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+            <Badge className="bg-[#2b7fff]/10 text-[#2b7fff] border border-[#2b7fff]/25 shadow-[0_0_10px_rgba(43,127,255,0.12)] text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
               <Sparkles className="size-2.5" />
               Recommended
             </Badge>
@@ -368,7 +314,7 @@ function CourseCard({ course, progress, onSelect }: CourseCardProps) {
         </div>
 
         {/* Title & Description */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <CardTitle className="font-display font-bold text-base leading-snug text-zinc-950 group-hover:text-[#2b7fff] transition-colors">
             {course.title}
           </CardTitle>
@@ -378,19 +324,18 @@ function CourseCard({ course, progress, onSelect }: CourseCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="p-0 flex flex-col gap-4">
-        {/* Prerequisites & Beginner-First Note */}
+      <CardContent className="p-0 flex flex-col gap-3 relative z-10">
+        {/* Difficulty / Duration / Lessons Info */}
         <div className="flex items-center gap-2 flex-wrap text-[11px] text-zinc-500">
           <span className="font-semibold text-zinc-700">Difficulty:</span>
           <Badge
             variant="secondary"
-            className={`text-[10px] px-2 py-0 font-bold rounded-md ${
-              course.difficulty === "Beginner"
+            className={`text-[10px] px-2 py-0 font-bold rounded-md ${course.difficulty === "Beginner"
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                 : course.difficulty === "Intermediate"
-                ? "bg-blue-50 text-blue-700 border-blue-200"
-                : "bg-purple-50 text-purple-700 border-purple-200"
-            }`}
+                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                  : "bg-purple-50 text-purple-700 border-purple-200"
+              }`}
           >
             {course.difficulty}
           </Badge>
@@ -401,11 +346,11 @@ function CourseCard({ course, progress, onSelect }: CourseCardProps) {
           <span>{course.totalModules} Modules</span>
         </div>
 
-        {/* Prerequisites Check Preview */}
-        <div className="p-2.5 rounded-xl bg-zinc-50 border border-zinc-100 text-[11px] text-zinc-600 flex items-center justify-between">
+        {/* Prerequisites Snippet */}
+        <div className="p-2.5 rounded-xl bg-zinc-50/80 border border-zinc-100 text-[11px] text-zinc-600 flex items-center justify-between">
           <span className="font-medium text-zinc-700">Prerequisites:</span>
-          <span className="font-semibold text-zinc-800 truncate max-w-[180px]">
-            {course.prerequisites.length === 0
+          <span className="font-semibold text-zinc-800 truncate max-w-[180px]" title={course.prerequisites?.map((p) => p.title).join(", ")}>
+            {!course.prerequisites || course.prerequisites.length === 0
               ? "✓ No Prerequisites"
               : course.prerequisites.map((p) => p.title).join(", ")}
           </span>
@@ -413,7 +358,7 @@ function CourseCard({ course, progress, onSelect }: CourseCardProps) {
 
         {/* Live Progress Bar (if enrolled) */}
         {isEnrolled && (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 mt-2">
             <div className="flex items-center justify-between text-[11px]">
               <span className="font-semibold text-zinc-700">Your Progress</span>
               <span className="font-bold text-[#2b7fff]">{progress}%</span>
@@ -423,20 +368,20 @@ function CourseCard({ course, progress, onSelect }: CourseCardProps) {
                 className="h-full bg-gradient-to-r from-[#2b7fff] to-[#2563eb] rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.6 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
               />
             </div>
           </div>
         )}
       </CardContent>
 
-      <CardFooter className="p-0 pt-2 flex items-center justify-between border-t border-zinc-100/90">
+      <CardFooter className="p-0 pt-3 flex items-center justify-between border-t border-zinc-100/90 relative z-10 mt-auto">
         <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-medium">
           <span className="text-amber-500 font-bold">★ {course.rating}</span>
           <span className="text-zinc-400">({course.enrolledCount.toLocaleString()} learners)</span>
         </div>
 
-        <div className="flex items-center gap-1 text-xs font-bold text-[#2b7fff] group-hover:translate-x-1 transition-transform">
+        <div className="flex items-center gap-1 text-xs font-bold text-[#2b7fff] group-hover:translate-x-1 transition-transform duration-200">
           <span>{isEnrolled ? "Continue" : "Explore"}</span>
           <ArrowRight className="size-3.5" />
         </div>

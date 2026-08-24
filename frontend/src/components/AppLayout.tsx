@@ -20,7 +20,7 @@ const navItems = [
   { label: "Dashboard", path: "/dashboard" },
   { label: "Roadmap", path: "/roadmap" },
   { label: "Courses", path: "/courses" },
-  { label: "Recommendations", path: "/recommendations" },
+  { label: "Study Plan", path: "/recommendations" },
   { label: "Assistant", path: "/assistant" },
 ];
 
@@ -135,11 +135,9 @@ export default function AppLayout() {
             <button
               onClick={() => navigate("/")}
               title="PathAI Home & Landing Page"
-              className="flex items-center gap-2.5 bg-transparent border-0 cursor-pointer p-0 select-none group"
+              className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 select-none group"
             >
-              <div className="size-9 shadow-lg shadow-[#2b7fff]/30 rounded-xl bg-[#2b7fff] text-blue-50 flex justify-center items-center group-hover:scale-105 transition-transform">
-                <Route className="size-5" />
-              </div>
+              <Route className="size-6 text-[#2b7fff] group-hover:scale-110 transition-transform stroke-[2.5]" />
               <span className="font-bold text-xl tracking-tight text-zinc-900 group-hover:text-[#2b7fff] transition-colors">
                 PathAI
               </span>
@@ -320,7 +318,7 @@ export default function AppLayout() {
       </AnimatePresence>
 
       {/* ─── Main Viewport Container ──────────────────────────── */}
-      <main className={`flex-1 w-full ${isActive("/landing") || location.pathname === "/" ? "max-w-none px-0 py-0" : "max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8"}`}>
+      <main className={`flex-1 w-full ${isActive("/assistant") || isActive("/landing") || location.pathname === "/" ? "max-w-none px-0 py-0" : "max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8"}`}>
         <Outlet />
       </main>
 
