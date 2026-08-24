@@ -1,8 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search,
   Sparkles,
   ArrowRight,
   Code2,
@@ -13,6 +12,8 @@ import {
   Smartphone,
   Briefcase,
   Compass,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,10 +47,21 @@ const categoryIconMap: Record<CourseCategoryType, typeof Code2> = {
 export default function CoursesPage() {
   const navigate = useNavigate();
 
-  // Search & Filter State
-  const [searchQuery, setSearchQuery] = useState("");
+  // Category Filter State
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [activeTab, setActiveTab] = useState<"all" | "recommended" | "in_progress" | "completed">("all");
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Read stored progress dynamically per course
   const enrolledProgressMap = useMemo(() => {
@@ -80,142 +92,118 @@ export default function CoursesPage() {
   // Filtered Courses
   const filteredCourses = useMemo(() => {
     return allCoursesCatalog.filter((course) => {
-      // 1. Search Query
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchesTitle = course.title.toLowerCase().includes(query);
-        const matchesCategory = course.category.toLowerCase().includes(query);
-        const matchesSkills = course.skillsGained.some((s) => s.toLowerCase().includes(query));
-        const matchesDesc = course.shortDescription.toLowerCase().includes(query);
-        if (!matchesTitle && !matchesCategory && !matchesSkills && !matchesDesc) {
-          return false;
-        }
-      }
-
-      // 2. Category Filter
       if (selectedCategory !== "All" && course.category !== selectedCategory) {
         return false;
       }
-
-      // 3. Tab Filter
-      if (activeTab === "recommended" && !course.isRecommended) {
-        return false;
-      }
-      if (activeTab === "in_progress" && !enrolledProgressMap[course.id]) {
-        return false;
-      }
-      if (activeTab === "completed" && enrolledProgressMap[course.id] !== 100) {
-        return false;
-      }
-
       return true;
     });
-  }, [searchQuery, selectedCategory, activeTab, enrolledProgressMap]);
+  }, [selectedCategory]);
 
   return (
-    <div className="flex flex-col gap-4 pb-20 w-full max-w-7xl mx-auto -mt-3 sm:-mt-5">
-      {/* ─── 1. Top Navigation Bar with Status Tabs & Search ──────────────────── */}
+    <div className="flex flex-col gap-5 pb-20 w-full max-w-7xl mx-auto -mt-2 sm:-mt-4">
+      {/* ─── 1. Single Top Line: All Courses Heading & Category Dropdown ─────── */}
       <RevealOnScroll distance={8} duration={0.25}>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-zinc-200/80 pb-0.5">
-          {/* Status Filter Tabs (All, Recommended, In Progress, Completed) */}
-          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden select-none">
-            {[
-              { id: "all", label: "All Programs" },
-              { id: "recommended", label: "✦ Recommended for You" },
-              { id: "in_progress", label: "In Progress" },
-              { id: "completed", label: "Completed" },
-            ].map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`relative px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                    isActive ? "text-[#2b7fff]" : "text-zinc-600 hover:text-zinc-950"
-                  }`}
-                >
-                  {tab.label}
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeCoursesTab"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2b7fff] rounded-full"
-                      transition={{ type: "spring", stiffness: 450, damping: 30 }}
-                    />
-                  )}
-                </button>
-              );
-            })}
+        <div className="flex flex-row justify-between items-center gap-3 pt-0 pb-1 border-b border-zinc-200/80">
+          {/* Left: All Courses Heading */}
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-display font-black text-2xl sm:text-3xl text-[#2b7fff] tracking-tight">
+              All Courses
+            </h1>
+            <span className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full bg-blue-50 text-[#2b7fff] text-xs font-bold border border-blue-200">
+              {filteredCourses.length} courses
+            </span>
           </div>
 
-          {/* Cleanly Aligned Search Bar on the Right */}
-          <div className="relative w-full md:w-80 shrink-0">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-zinc-400 transition-colors pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search React, Docker, AI, SQL..."
-              className="w-full h-9 pl-9 pr-9 rounded-xl border border-zinc-200/90 bg-white text-xs sm:text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/25 focus:border-[#2b7fff] shadow-2xs hover:border-zinc-300 transition-all duration-200 text-zinc-950 placeholder:text-zinc-400"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-zinc-400 hover:text-zinc-700 bg-transparent border-0 cursor-pointer p-1"
-              >
-                Clear
-              </button>
-            )}
+          {/* Right: Modern Category Dropdown Selector (Matching Screenshot Style) */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+              className="h-10 sm:h-11 px-3.5 sm:px-4 rounded-2xl bg-white/95 backdrop-blur-md border border-blue-200/90 shadow-2xs hover:border-[#2b7fff] text-zinc-800 text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-between gap-2.5 cursor-pointer min-w-[190px] sm:min-w-[240px]"
+            >
+              <div className="flex items-center gap-2 truncate">
+                {selectedCategory === "All" ? (
+                  <Sparkles className="size-4 text-[#2b7fff] shrink-0" />
+                ) : (
+                  <Code2 className="size-4 text-[#2b7fff] shrink-0" />
+                )}
+                <span className="truncate">
+                  {selectedCategory === "All" ? `All Categories (${allCoursesCatalog.length})` : selectedCategory}
+                </span>
+              </div>
+              <ChevronDown
+                className={`size-4 text-zinc-400 shrink-0 transition-transform duration-200 ${
+                  isCategoryDropdownOpen ? "rotate-180 text-[#2b7fff]" : ""
+                }`}
+              />
+            </button>
+
+            {/* Dropdown Menu */}
+            <AnimatePresence>
+              {isCategoryDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-2 w-72 max-h-80 overflow-y-auto rounded-2xl bg-white shadow-2xl border border-zinc-200 p-1.5 z-50 [scrollbar-width:thin]"
+                >
+                  {/* Option: All Categories */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory("All");
+                      setIsCategoryDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer border-0 ${
+                      selectedCategory === "All"
+                        ? "bg-blue-50 text-[#2b7fff]"
+                        : "text-zinc-700 hover:bg-zinc-100"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="size-3.5 text-[#2b7fff]" />
+                      <span>All Categories ({allCoursesCatalog.length})</span>
+                    </div>
+                    {selectedCategory === "All" && <Check className="size-4 text-[#2b7fff]" />}
+                  </button>
+
+                  <div className="my-1 border-t border-zinc-100" />
+
+                  {courseCategoriesList.map((cat) => {
+                    const isSelected = selectedCategory === cat.name;
+                    const Icon = categoryIconMap[cat.name] || Code2;
+                    return (
+                      <button
+                        key={cat.name}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategory(cat.name);
+                          setIsCategoryDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer border-0 ${
+                          isSelected
+                            ? "bg-blue-50 text-[#2b7fff]"
+                            : "text-zinc-700 hover:bg-zinc-100"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Icon className="size-3.5 text-[#2b7fff] shrink-0" />
+                          <span className="truncate">{cat.name}</span>
+                        </div>
+                        {isSelected && <Check className="size-4 text-[#2b7fff] shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </RevealOnScroll>
 
-      {/* ─── 2. Clean Borderless Categories Bar ────────────────────────────── */}
-      <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-0.5 select-none">
-        <button
-          type="button"
-          onClick={() => setSelectedCategory("All")}
-          className={`px-3 py-1 rounded-full text-xs transition-all duration-150 cursor-pointer whitespace-nowrap ${
-            selectedCategory === "All"
-              ? "bg-[#2b7fff] text-white font-bold shadow-2xs"
-              : "text-zinc-600 hover:text-zinc-950 font-medium hover:bg-zinc-100/80 border-0 bg-transparent"
-          }`}
-        >
-          All Categories ({allCoursesCatalog.length})
-        </button>
-
-        {courseCategoriesList.map((cat) => {
-          const isSelected = selectedCategory === cat.name;
-          const Icon = categoryIconMap[cat.name] || Code2;
-          return (
-            <button
-              key={cat.name}
-              type="button"
-              onClick={() => setSelectedCategory(cat.name)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-150 cursor-pointer whitespace-nowrap ${
-                isSelected
-                  ? "bg-[#2b7fff] text-white font-bold shadow-2xs"
-                  : "text-zinc-600 hover:text-zinc-950 font-medium hover:bg-zinc-100/80 border-0 bg-transparent"
-              }`}
-            >
-              <Icon className="size-3.5" />
-              {cat.name}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ─── 3. Main Course Grid ───────────────────────────────────────────── */}
+      {/* ─── 2. Main Course Grid ───────────────────────────────────────────── */}
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display font-bold text-lg text-zinc-950">
-            {selectedCategory === "All" ? "Explore All Courses" : selectedCategory}
-          </h2>
-          <span className="text-xs text-zinc-500 font-medium">
-            Showing {filteredCourses.length} results
-          </span>
-        </div>
 
         {filteredCourses.length === 0 ? (
           <div className="p-12 rounded-3xl border border-dashed border-zinc-200 bg-white/60 flex flex-col items-center justify-center text-center gap-3">
@@ -223,18 +211,16 @@ export default function CoursesPage() {
               <Compass className="size-6" />
             </div>
             <h3 className="font-bold text-base text-zinc-900">
-              No courses found {searchQuery ? `for "${searchQuery}"` : ""}
+              No courses found
             </h3>
             <p className="text-xs text-zinc-500 max-w-sm">
-              Try searching for another technology (e.g. React, Python, Docker) or explore all categories.
+              Try exploring other categories or view all courses.
             </p>
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                setSearchQuery("");
                 setSelectedCategory("All");
-                setActiveTab("all");
               }}
               className="mt-2 text-xs rounded-xl cursor-pointer"
             >

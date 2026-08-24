@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -8,6 +8,9 @@ import {
   LogIn,
   Menu,
   X,
+  Camera,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -56,11 +59,50 @@ export default function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [notifications, setNotifications] = useState(demoNotifications);
+  const [notifications, setNotifications] = useState<typeof demoNotifications>(() => {
+    if (typeof window === "undefined") return demoNotifications;
+    try {
+      const stored = localStorage.getItem("app_notifications");
+      if (stored !== null) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // ignore
+    }
+    return demoNotifications;
+  });
 
   // Profile Edit State
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [editName, setEditName] = useState(user?.fullName || "Alex Rivera");
   const [editBio, setEditBio] = useState(user?.bio || "Aspiring Full-Stack & AI Engineer");
+  const [editAvatar, setEditAvatar] = useState<string>(user?.avatarUrl || "");
+
+  useEffect(() => {
+    if (user) {
+      if (user.fullName) setEditName(user.fullName);
+      if (user.bio) setEditBio(user.bio);
+      setEditAvatar(user.avatarUrl || "");
+    }
+  }, [user, profileModalOpen]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Read and convert to base64 DataURL for offline & fast rendering
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setEditAvatar(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setEditAvatar("");
+  };
 
   const getInitials = (name?: string) => {
     if (!name) return "AR";
@@ -83,14 +125,19 @@ export default function AppLayout() {
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    updateUserProfile({ fullName: editName, bio: editBio });
+    updateUserProfile({ fullName: editName, bio: editBio, avatarUrl: editAvatar });
     setProfileModalOpen(false);
   };
 
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    setNotifications([]);
+    try {
+      localStorage.setItem("app_notifications", JSON.stringify([]));
+    } catch {
+      // ignore
+    }
   };
 
   // Initialize Lenis smooth scrolling & live notification sync
@@ -98,16 +145,24 @@ export default function AppLayout() {
     const cleanup = initSmoothScroll();
     const unsubscribe = subscribeToProgressUpdates(() => {
       // Dynamic notification for real milestone activity
-      setNotifications((prev) => [
-        {
-          id: `n-${Date.now()}`,
-          title: "Milestone Verified",
-          desc: "Your learning path progress has been synchronized with live competency radar.",
-          time: "Just now",
-          unread: true,
-        },
-        ...prev.slice(0, 5),
-      ]);
+      setNotifications((prev) => {
+        const next = [
+          {
+            id: `n-${Date.now()}`,
+            title: "Milestone Verified",
+            desc: "Your learning path progress has been synchronized with live competency radar.",
+            time: "Just now",
+            unread: true,
+          },
+          ...prev.slice(0, 5),
+        ];
+        try {
+          localStorage.setItem("app_notifications", JSON.stringify(next));
+        } catch {
+          // ignore
+        }
+        return next;
+      });
     });
 
     return () => {
@@ -188,7 +243,7 @@ export default function AppLayout() {
                         </Badge>
                       )}
                     </div>
-                    {unreadCount > 0 && (
+                    {notifications.length > 0 && (
                       <button
                         onClick={markAllRead}
                         className="text-xs text-[#2b7fff] hover:underline bg-transparent border-0 cursor-pointer font-medium"
@@ -199,22 +254,32 @@ export default function AppLayout() {
                   </div>
 
                   <div className="flex flex-col gap-2 max-h-72 overflow-y-auto">
-                    {notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        className={`p-3 rounded-xl border transition-colors ${
-                          n.unread
-                            ? "bg-[#2b7fff]/5 border-[#2b7fff]/20"
-                            : "bg-zinc-50/50 border-zinc-100"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between text-xs font-bold text-zinc-900 mb-1">
-                          <span>{n.title}</span>
-                          <span className="text-[10px] text-[#71717b] font-normal">{n.time}</span>
+                    {notifications.length > 0 ? (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`p-3 rounded-xl border transition-colors ${
+                            n.unread
+                              ? "bg-[#2b7fff]/5 border-[#2b7fff]/20"
+                              : "bg-zinc-50/50 border-zinc-100"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-xs font-bold text-zinc-900 mb-1">
+                            <span>{n.title}</span>
+                            <span className="text-[10px] text-[#71717b] font-normal">{n.time}</span>
+                          </div>
+                          <p className="text-xs text-zinc-600 leading-relaxed">{n.desc}</p>
                         </div>
-                        <p className="text-xs text-zinc-600 leading-relaxed">{n.desc}</p>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-7 text-center gap-2">
+                        <div className="size-10 rounded-full bg-blue-50 text-[#2b7fff] flex items-center justify-center">
+                          <Bell className="size-5" />
+                        </div>
+                        <span className="text-xs font-bold text-zinc-800">No notifications</span>
+                        <p className="text-[11px] text-zinc-400">You're all caught up!</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               )}
@@ -229,13 +294,8 @@ export default function AppLayout() {
               >
                 <Avatar className="size-9 ring-2 ring-[#2b7fff]/20 hover:ring-[#2b7fff]/50 transition-all">
                   {user?.avatarUrl ? (
-                    <AvatarImage src={user.avatarUrl} alt={user.fullName} />
-                  ) : (
-                    <AvatarImage
-                      src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200"
-                      alt="user"
-                    />
-                  )}
+                    <AvatarImage src={user.avatarUrl} alt={user.fullName} className="object-cover" />
+                  ) : null}
                   <AvatarFallback className="text-xs font-semibold bg-[#2b7fff]/10 text-[#2b7fff]">
                     {getInitials(user?.fullName)}
                   </AvatarFallback>
@@ -318,7 +378,15 @@ export default function AppLayout() {
       </AnimatePresence>
 
       {/* ─── Main Viewport Container ──────────────────────────── */}
-      <main className={`flex-1 w-full ${isActive("/assistant") || isActive("/landing") || location.pathname === "/" ? "max-w-none px-0 py-0" : "max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8"}`}>
+      <main
+        className={`flex-1 w-full ${
+          location.pathname.includes("/assistant") || location.pathname === "/" || location.pathname.startsWith("/landing")
+            ? "max-w-none px-0 py-0"
+            : location.pathname.startsWith("/roadmap") || location.pathname.includes("/roadmap")
+            ? "max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 pt-2 sm:pt-3 pb-12"
+            : "max-w-[1400px] mx-auto px-4 sm:px-8 lg:px-12 py-8"
+        }`}
+      >
         <Outlet />
       </main>
 
@@ -326,25 +394,65 @@ export default function AppLayout() {
       {profileModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-zinc-200 max-w-md w-full p-6 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-150">
+            {/* Hidden File Input for Photo Upload */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
+
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar className="size-12 ring-2 ring-[#2b7fff]/30">
-                  <AvatarImage
-                    src={
-                      user?.avatarUrl ||
-                      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200"
-                    }
-                    alt="user"
-                  />
-                  <AvatarFallback className="bg-[#2b7fff]/10 text-[#2b7fff] font-bold">
-                    {getInitials(user?.fullName)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-bold text-base text-zinc-900">
-                    {user?.fullName || "Learner Profile"}
+              <div className="flex items-center gap-3.5">
+                {/* Interactive Avatar with Upload Trigger */}
+                <div
+                  className="relative group cursor-pointer shrink-0"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Click to upload profile photo"
+                >
+                  <Avatar className="size-14 ring-2 ring-[#2b7fff]/30 group-hover:ring-[#2b7fff] transition-all">
+                    {editAvatar ? (
+                      <AvatarImage src={editAvatar} alt={editName} className="object-cover" />
+                    ) : null}
+                    <AvatarFallback className="bg-[#2b7fff]/10 text-[#2b7fff] font-bold text-sm">
+                      {getInitials(editName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                    <Camera className="size-5" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 size-5 rounded-full bg-[#2b7fff] text-white flex items-center justify-center shadow-md border border-white">
+                    <Camera className="size-3" />
+                  </div>
+                </div>
+
+                <div className="flex flex-col">
+                  <h3 className="font-bold text-base text-zinc-900 leading-tight">
+                    {editName || "Learner Profile"}
                   </h3>
                   <p className="text-xs text-[#71717b]">{user?.email || "learner@pathai.dev"}</p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-xs text-[#2b7fff] hover:text-[#2563eb] hover:underline font-semibold flex items-center gap-1 bg-transparent border-0 cursor-pointer p-0"
+                    >
+                      <Upload className="size-3" /> Upload Photo
+                    </button>
+                    {editAvatar && (
+                      <>
+                        <span className="text-zinc-300 text-xs">•</span>
+                        <button
+                          type="button"
+                          onClick={handleRemovePhoto}
+                          className="text-xs text-red-500 hover:text-red-600 hover:underline font-medium flex items-center gap-1 bg-transparent border-0 cursor-pointer p-0"
+                        >
+                          <Trash2 className="size-3" /> Remove
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
               <button

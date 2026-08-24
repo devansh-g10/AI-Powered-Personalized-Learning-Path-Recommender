@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       id: "demo-user-101",
       email: "learner@pathai.dev",
       fullName: "Alex Rivera",
-      avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=200",
+      avatarUrl: null,
       bio: "Aspiring Full-Stack & AI Engineer | Building interactive web apps",
     };
     const demoSession: Session = {
@@ -170,10 +170,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ─── Update Profile ───────────────────────────────────────────────────────
   const updateUserProfile = (updates: Partial<User>) => {
-    if (!user) return;
-    const updated = { ...user, ...updates };
-    setUser(updated);
-    localStorage.setItem("user", JSON.stringify(updated));
+    setUser((prev) => {
+      const base: User = prev || {
+        id: "demo-user-101",
+        email: "learner@pathai.dev",
+        fullName: "Alex Rivera",
+        avatarUrl: null,
+        bio: null,
+      };
+      const updated = { ...base, ...updates };
+      try {
+        localStorage.setItem("user", JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
   };
 
   // ─── Google OAuth ─────────────────────────────────────────────────────────

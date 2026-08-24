@@ -18,8 +18,6 @@ import {
   Download,
   ArrowRight,
   Compass,
-  ChevronDown,
-  Plus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,7 +26,6 @@ import { dispatchProgressUpdate, subscribeToProgressUpdates } from "@/lib/learni
 import {
   getRoadmapForCourseOrId,
   getCourseByIdOrSlug,
-  allCoursesCatalog,
   type CourseRoadmapData,
   type RoadmapTopic,
 } from "@/lib/courses-data";
@@ -97,17 +94,6 @@ export default function RoadmapPage() {
     return getCourseByIdOrSlug(activeTargetId);
   }, [activeTargetId]);
 
-  // Quick curated featured paths for one-click pill jumping
-  const quickFeaturedPaths = useMemo(() => {
-    return [
-      { id: "docker-devops", shortLabel: "DevOps & K8s", isCourse: true },
-      { id: "typescript-mastery", shortLabel: "TypeScript Pro", isCourse: true },
-      { id: "react-19-development", shortLabel: "React 19", isCourse: true },
-      { id: "langchain-rag-agents", shortLabel: "AI Agents & RAG", isCourse: true },
-      { id: "nextjs-15-fullstack", shortLabel: "Next.js 15", isCourse: true },
-    ];
-  }, []);
-
   const [roadmap, setRoadmap] = useState<CourseRoadmapData | null>(() => {
     if (!activeTargetId) return null;
     return getRoadmapForCourseOrId(activeTargetId);
@@ -117,7 +103,6 @@ export default function RoadmapPage() {
   const [completedTopicIds, setCompletedTopicIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [isPathSelectorOpen, setIsPathSelectorOpen] = useState(false);
 
   // Topic Question Modal State
   const [activeQuestionTopic, setActiveQuestionTopic] = useState<RoadmapTopic | null>(null);
@@ -402,175 +387,15 @@ export default function RoadmapPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-16 w-full max-w-7xl mx-auto">
-      {/* ─── 0. Path Selector Bar ───────────────────── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative z-30">
-        {/* Dropdown Menu Trigger */}
-        <div className="relative w-full sm:w-auto">
-          <button
-            onClick={() => setIsPathSelectorOpen((prev) => !prev)}
-            className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2.5 px-3.5 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-100 text-zinc-900 transition-colors cursor-pointer group text-xs font-bold border-0"
-          >
-            <div className="flex items-center gap-2 truncate">
-              <div className="size-6 rounded-lg bg-[#2b7fff]/10 text-[#2b7fff] flex items-center justify-center shrink-0">
-                <Layers className="size-3.5" />
-              </div>
-              <span className="text-zinc-500 font-normal hidden md:inline">Roadmap:</span>
-              <span className="font-extrabold text-zinc-950 max-w-[200px] sm:max-w-[260px] truncate text-left">
-                {roadmap.objective}
-              </span>
-            </div>
-            <ChevronDown
-              className={`size-4 text-zinc-400 group-hover:text-zinc-800 transition-transform duration-200 shrink-0 ${isPathSelectorOpen ? "rotate-180" : ""
-                }`}
-            />
-          </button>
-
-          {/* Interactive Modal Dropdown */}
-          <AnimatePresence>
-            {isPathSelectorOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40 bg-black/10 backdrop-blur-2xs"
-                  onClick={() => setIsPathSelectorOpen(false)}
-                />
-                <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                  transition={{ duration: 0.18 }}
-                  className="absolute left-0 top-full mt-2 w-full sm:w-96 rounded-2xl bg-white shadow-2xl border border-zinc-200/90 p-3.5 z-50 flex flex-col gap-2.5 max-h-[400px] overflow-y-auto [scrollbar-width:thin]"
-                >
-                  {/* User Paths Section */}
-                  {userPaths.length > 0 && (
-                    <>
-                      <div className="text-[10px] uppercase font-extrabold text-zinc-400 tracking-wider px-2 pt-1 flex items-center justify-between">
-                        <span>Your Learning Paths</span>
-                        <span className="text-[#2b7fff] font-bold">{userPaths.length} Active</span>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        {userPaths.map((p) => {
-                          const isCurrent = activeTargetId === p.id;
-                          return (
-                            <button
-                              key={p.id}
-                              onClick={() => {
-                                navigate(`/conversations/${p.id}/roadmap`);
-                                setIsPathSelectorOpen(false);
-                              }}
-                              className={`flex items-center justify-between p-2.5 rounded-xl transition-colors text-left group cursor-pointer border-0 ${isCurrent
-                                  ? "bg-blue-50 text-[#2b7fff]"
-                                  : "hover:bg-zinc-50 text-zinc-800 bg-transparent"
-                                }`}
-                            >
-                              <div className="flex flex-col gap-0.5">
-                                <span className="text-xs font-bold group-hover:text-[#2b7fff] line-clamp-1">
-                                  {p.title}
-                                </span>
-                                <span className="text-[10px] text-zinc-500 font-medium">{p.category}</span>
-                              </div>
-                              {isCurrent && (
-                                <Badge className="bg-[#2b7fff] text-white text-[10px] px-2 py-0.5 font-bold">
-                                  Active
-                                </Badge>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-
-                  {/* Curated Catalog Roadmaps */}
-                  <div className="text-[10px] uppercase font-extrabold text-zinc-400 tracking-wider px-2 pt-2 border-t border-zinc-100 flex items-center justify-between">
-                    <span>Curated Engineering Roadmaps</span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    {allCoursesCatalog.slice(0, 6).map((c) => {
-                      const isCurrent = activeTargetId === c.slug || activeTargetId === c.id;
-                      return (
-                        <button
-                          key={c.id}
-                          onClick={() => {
-                            navigate(`/roadmap/${c.slug}`);
-                            setIsPathSelectorOpen(false);
-                          }}
-                          className={`flex items-center justify-between p-2.5 rounded-xl transition-colors text-left group cursor-pointer border-0 ${isCurrent
-                              ? "bg-blue-50 text-[#2b7fff]"
-                              : "hover:bg-zinc-50 text-zinc-800 bg-transparent"
-                            }`}
-                        >
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-xs font-bold group-hover:text-blue-600 line-clamp-1">
-                              {c.title}
-                            </span>
-                            <span className="text-[10px] text-zinc-500 font-medium">
-                              {c.category} • {c.estimatedWeeks} wks
-                            </span>
-                          </div>
-                          {isCurrent && (
-                            <Badge className="bg-[#2b7fff] text-white text-[10px] px-2 py-0.5 font-bold">
-                              Active
-                            </Badge>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Create New Path Action */}
-                  <div className="pt-2 border-t border-zinc-100">
-                    <button
-                      onClick={() => {
-                        setIsPathSelectorOpen(false);
-                        navigate("/questionnaire");
-                      }}
-                      className="w-full py-2 px-4 rounded-xl bg-[#2b7fff] hover:bg-[#2563eb] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer border-0"
-                    >
-                      <Plus className="size-3.5" />
-                      Craft New Learning Path with AI
-                    </button>
-                  </div>
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Quick Horizontal Filter Pills (Scrollbar strictly hidden) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden w-full sm:w-auto pb-0.5">
-          <span className="text-[11px] font-bold text-zinc-400 shrink-0 uppercase tracking-wider hidden lg:inline mr-1">
-            Quick Jump:
-          </span>
-          {quickFeaturedPaths.map((item) => {
-            const isActive = activeTargetId === item.id || (matchedCourse && matchedCourse.slug === item.id);
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  if (item.isCourse) navigate(`/roadmap/${item.id}`);
-                  else navigate(`/conversations/${item.id}/roadmap`);
-                }}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border-0 ${isActive
-                    ? "bg-[#2b7fff] text-white font-extrabold shadow-xs"
-                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200/80 hover:text-zinc-900"
-                  }`}
-              >
-                {item.shortLabel}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ─── 1. Header Section ────────────────────────────────────────────── */}
+    <div className="flex flex-col gap-6 pb-16 w-full max-w-7xl mx-auto pt-0">
+      {/* ─── 1. Header Section (Directly at Top) ─────────────────────────── */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="flex flex-col md:flex-row justify-between items-start md:items-end gap-5 py-2"
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col md:flex-row justify-between items-start md:items-end gap-5 pt-0 pb-1"
       >
-        <div className="flex flex-col gap-2.5 max-w-3xl">
+        <div className="flex flex-col gap-2 max-w-3xl">
           <div className="flex items-center gap-2 flex-wrap">
             <Badge
               variant="secondary"
@@ -623,13 +448,9 @@ export default function RoadmapPage() {
             </Button>
           </div>
 
-          <h1 className="font-display font-bold text-3xl sm:text-4xl text-zinc-950 tracking-tight">
+          <h1 className="font-display font-black text-3xl sm:text-4xl text-[#2b7fff] tracking-tight">
             {roadmap.objective}
           </h1>
-          <p className="text-zinc-600 text-xs sm:text-sm leading-relaxed">
-            {roadmap.currentAssessment ||
-              "Your personalized journey from foundation to career-ready, adapted by AI."}
-          </p>
         </div>
 
         {/* Overall Progress Widget */}
@@ -682,9 +503,7 @@ export default function RoadmapPage() {
                 {roadmap.phases.length} Total Stages
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-zinc-500">
-              Follow the connected path. Click any stage to view its milestones.
-            </p>
+
           </div>
 
           <div className="relative flex flex-col">
@@ -728,18 +547,18 @@ export default function RoadmapPage() {
                     }}
                     whileHover={{ x: 2, transition: { duration: 0.2 } }}
                     className={`relative text-left rounded-2xl flex p-4 items-start gap-4 cursor-pointer transition-all border-0 ${isSelected
-                        ? "bg-blue-50/70"
-                        : "hover:bg-zinc-50 bg-transparent"
+                      ? "bg-blue-50/70"
+                      : "hover:bg-zinc-50 bg-transparent"
                       }`}
                   >
                     {/* Node Icon */}
                     <div className="relative shrink-0 z-10">
                       <div
                         className={`size-12 rounded-full flex justify-center items-center transition-all ${isCompleted
-                            ? "bg-emerald-500 text-white"
-                            : isInProgress
-                              ? "bg-[#2b7fff] text-white"
-                              : "bg-zinc-100 text-zinc-400"
+                          ? "bg-emerald-500 text-white"
+                          : isInProgress
+                            ? "bg-[#2b7fff] text-white"
+                            : "bg-zinc-100 text-zinc-400"
                           }`}
                       >
                         <Icon className="size-5" />
@@ -818,8 +637,8 @@ export default function RoadmapPage() {
                   <div className="flex items-center gap-2">
                     <div
                       className={`size-8 rounded-lg flex justify-center items-center ${getPhaseStatus(safePhaseIndex).variant === "completed"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-blue-50 text-[#2b7fff]"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-blue-50 text-[#2b7fff]"
                         }`}
                     >
                       {getPhaseStatus(safePhaseIndex).variant === "completed" ? (
@@ -838,9 +657,7 @@ export default function RoadmapPage() {
                       : "Stage"}
                   </span>
                 </div>
-                <p className="text-xs text-zinc-500 leading-relaxed">
-                  Check off milestones as you complete them. Click the question icon to ask AI about any topic.
-                </p>
+
               </div>
 
               {/* Staggered Milestone Rows */}
@@ -863,8 +680,8 @@ export default function RoadmapPage() {
                           y: { duration: 0.35, delay: tIdx * 0.06 },
                         }}
                         className={`group flex items-center justify-between rounded-xl px-3 py-2.5 text-xs sm:text-sm transition-colors ${isChecked
-                            ? "text-zinc-400 bg-emerald-50/40"
-                            : "text-zinc-800 hover:bg-zinc-50"
+                          ? "text-zinc-400 bg-emerald-50/40"
+                          : "text-zinc-800 hover:bg-zinc-50"
                           }`}
                       >
                         {/* Interactive Checkbox */}
@@ -875,8 +692,8 @@ export default function RoadmapPage() {
                           <motion.div
                             whileTap={{ scale: 0.85 }}
                             className={`size-4.5 rounded-md flex items-center justify-center border transition-all ${isChecked
-                                ? "bg-[#2b7fff] border-[#2b7fff] text-white"
-                                : "bg-white border-zinc-300 group-hover:border-[#2b7fff]"
+                              ? "bg-[#2b7fff] border-[#2b7fff] text-white"
+                              : "bg-white border-zinc-300 group-hover:border-[#2b7fff]"
                               }`}
                           >
                             {isChecked && (
@@ -927,19 +744,7 @@ export default function RoadmapPage() {
           </AnimatePresence>
 
           {/* AI Insight Section */}
-          <div className="flex flex-col gap-2 pt-2 border-t border-zinc-100">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#2b7fff] uppercase tracking-wider">
-              <Sparkles className="size-3.5" />
-              <span>PathAI Pacing Insight</span>
-            </div>
-            <p className="text-zinc-600 text-xs leading-relaxed">
-              {progressPercent >= 60
-                ? `Outstanding velocity! You have completed over 60% of ${roadmap.objective}.`
-                : progressPercent > 0
-                  ? `You are steadily progressing through ${currentSelectedPhase.title}. Completing milestones keeps you on track.`
-                  : `Start by checking off the foundation milestones for ${roadmap.objective}.`}
-            </p>
-          </div>
+
         </div>
       </div>
 

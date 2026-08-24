@@ -409,7 +409,7 @@ export default function AssistantPage() {
   const isInitialState = messages.length === 0;
 
   return (
-    <div className="w-full flex h-[calc(100vh-65px)] bg-white text-zinc-900 overflow-hidden font-sans select-none" data-lenis-prevent="true">
+    <div className="w-full flex h-[calc(100vh-65px)] bg-slate-50 text-zinc-900 overflow-hidden font-sans select-none relative" data-lenis-prevent="true">
       {/* ─── 1. Left Light Sidebar (Clean Pattern) ─────────────────────── */}
       <AnimatePresence initial={false}>
         {sidebarOpen && (
@@ -418,22 +418,22 @@ export default function AssistantPage() {
             animate={{ width: 260, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.18, ease: "easeInOut" }}
-            className="h-full bg-zinc-50 border-r border-zinc-200 flex flex-col shrink-0 overflow-hidden z-20"
+            className="h-full bg-white border-r border-zinc-200 flex flex-col shrink-0 overflow-hidden z-20 shadow-xs"
           >
             {/* Top Row: New Chat + Collapse Sidebar Toggle */}
             <div className="p-3 pb-2 flex items-center gap-2 border-b border-zinc-200/60">
               <button
                 type="button"
                 onClick={handleNewSession}
-                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[#2563eb] font-semibold bg-blue-50/90 hover:bg-blue-100 transition-colors cursor-pointer border border-[#2563eb]/20 text-xs shadow-2xs group"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[#2b7fff] font-bold bg-blue-50/90 hover:bg-blue-100 transition-colors cursor-pointer border border-[#2b7fff]/20 text-xs shadow-2xs group"
               >
-                <Plus className="size-4 text-[#2563eb] stroke-[2.5]" />
+                <Plus className="size-4 text-[#2b7fff] stroke-[2.5]" />
                 <span>New chat</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}
-                className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 transition-colors cursor-pointer border-0 bg-transparent shrink-0"
+                className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer border-0 bg-transparent shrink-0"
                 title="Close sidebar"
               >
                 <PanelLeftClose className="size-4" />
@@ -473,8 +473,8 @@ export default function AssistantPage() {
                       key={s.id}
                       onClick={() => handleSelectSession(s)}
                       className={`group relative px-3 py-2 rounded-xl text-left cursor-pointer transition-colors flex items-center justify-between gap-2 ${isActive
-                          ? "bg-blue-50/90 text-[#2563eb] font-semibold border-l-2 border-[#2563eb] shadow-2xs"
-                          : "text-zinc-700 hover:bg-zinc-200/50 hover:text-zinc-900"
+                        ? "bg-blue-50/90 text-[#2b7fff] font-bold border-l-2 border-[#2b7fff] shadow-2xs"
+                        : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
                         }`}
                     >
                       <div className="flex flex-col min-w-0 flex-1">
@@ -498,14 +498,14 @@ export default function AssistantPage() {
         )}
       </AnimatePresence>
 
-      {/* ─── 2. Main Light Canvas ───────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white h-full relative text-zinc-900">
+      {/* ─── 2. Main Canvas ───────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-w-0 bg-white h-full relative text-zinc-900 z-10">
         {/* Floating Sidebar Open Trigger if Sidebar is Hidden */}
         {!sidebarOpen && (
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
-            className="absolute top-3 left-3 z-30 p-1.5 rounded-lg bg-white shadow-sm border border-zinc-200 text-[#2563eb] hover:bg-blue-50 transition-colors cursor-pointer"
+            className="absolute top-3 left-3 z-30 p-1.5 rounded-lg bg-white shadow-sm border border-zinc-200 text-[#2b7fff] hover:bg-blue-50 transition-colors cursor-pointer"
             title="Open sidebar"
           >
             <PanelLeft className="size-4" />
@@ -517,20 +517,61 @@ export default function AssistantPage() {
           <div className="w-full flex flex-col space-y-6 min-h-full">
             {isLoading ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-2 text-zinc-400 py-20">
-                <Loader2 className="size-5 text-[#2563eb] animate-spin" />
+                <Loader2 className="size-5 text-[#2b7fff] animate-spin" />
                 <span className="text-xs">Connecting to learning context...</span>
               </div>
             ) : (
               <>
-                {/* Initial Blank State (Centered Welcome with Electric Blue) */}
+                {/* Initial Blank State (Centered Welcome with Animated Floating 3D Mascot) */}
                 {isInitialState && (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-20 select-none">
-                    <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#2563eb] tracking-tight">
-                      How can I help you today?
-                    </h2>
+                  <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 py-8 sm:py-12 select-none max-w-xl mx-auto">
+                    {/* Animated 3D Mascot Character */}
+                    <div className="relative flex flex-col items-center justify-center">
+
+                      {/* Floating Robot Body (High-Res Transparent Mascot) */}
+                      <motion.div
+                        animate={{
+                          y: [0, -12, 0],
+                          rotate: [0, 1.2, -1.2, 0],
+                        }}
+                        transition={{
+                          repeat: Infinity,
+                          duration: 3.8,
+                          ease: "easeInOut",
+                        }}
+                        className="relative size-44 sm:size-52 z-10 flex items-center justify-center pointer-events-none select-none"
+                      >
+                        <img
+                          src="/ai_robot_mascot.png"
+                          alt="PathAI Robot Mascot"
+                          className="size-full object-contain drop-shadow-[0_16px_28px_rgba(43,127,255,0.22)]"
+                        />
+                      </motion.div>
+
+                      {/* Ambient Blue Glowing Ring Pulse beneath the Robot */}
+                      <motion.div
+                        animate={{
+                          scale: [1, 1.18, 1],
+                          opacity: [0.5, 0.2, 0.5],
+                        }}
+                        transition={{
+                          repeat: Infinity,
+                          duration: 2.2,
+                          ease: "easeInOut",
+                        }}
+                        className="w-24 sm:w-32 h-3.5 bg-sky-400/40 rounded-full blur-md -mt-4"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 pt-1">
+                      <h2 className="text-2xl sm:text-3xl font-display font-bold text-[#2b7fff] tracking-tight">
+                        How can I help you today?
+                      </h2>
+
+                    </div>
 
                     {/* Quick Starter Chips */}
-                    <div className="flex items-center justify-center gap-2.5 pt-3">
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-2 max-w-lg">
                       {cleanPromptSuggestions.map((item, idx) => {
                         const Icon = item.icon;
                         return (
@@ -538,7 +579,7 @@ export default function AssistantPage() {
                             key={idx}
                             type="button"
                             onClick={() => handleSendMessage(item.prompt)}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-50/80 hover:bg-[#2563eb] text-[#2563eb] hover:text-white text-xs font-semibold transition-all cursor-pointer border border-[#2563eb]/20 shadow-2xs"
+                            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-blue-50/70 hover:bg-[#2b7fff] text-[#2b7fff] hover:text-white text-xs font-semibold transition-all cursor-pointer border border-[#2b7fff]/20 shadow-2xs hover:shadow-sm"
                           >
                             <Icon className="size-3.5" />
                             <span>{item.label}</span>
@@ -565,8 +606,8 @@ export default function AssistantPage() {
                       {/* Message Content Bubble */}
                       <div
                         className={`text-sm leading-relaxed ${isUser
-                            ? "bg-[#2563eb] text-white px-4 py-2.5 rounded-3xl max-w-xl self-end"
-                            : "text-zinc-900 py-1 w-full"
+                          ? "bg-[#2b7fff] text-white px-4 py-2.5 rounded-2xl rounded-tr-xs max-w-xl self-end shadow-sm"
+                          : "text-zinc-900 py-1 w-full"
                           }`}
                       >
                         {isUser ? (
@@ -582,7 +623,7 @@ export default function AssistantPage() {
                           <button
                             type="button"
                             onClick={() => handleCopyMessage(msgId, msg.content)}
-                            className="p-1.5 rounded-lg hover:bg-zinc-100 hover:text-[#2563eb] transition-colors cursor-pointer border-0 bg-transparent"
+                            className="p-1.5 rounded-lg hover:bg-zinc-100 hover:text-[#2b7fff] transition-colors cursor-pointer border-0 bg-transparent"
                             title="Copy"
                           >
                             {copiedMessageId === msgId ? (
@@ -595,7 +636,7 @@ export default function AssistantPage() {
                           <button
                             type="button"
                             onClick={() => handleSendMessage(`Can you give me another practical example and test case for "${activeTopic}"?`)}
-                            className="p-1.5 rounded-lg hover:bg-zinc-100 hover:text-[#2563eb] transition-colors cursor-pointer border-0 bg-transparent"
+                            className="p-1.5 rounded-lg hover:bg-zinc-100 hover:text-[#2b7fff] transition-colors cursor-pointer border-0 bg-transparent"
                             title="Retry / Follow-up"
                           >
                             <RefreshCw className="size-3.5" />
@@ -614,7 +655,7 @@ export default function AssistantPage() {
                             <button
                               type="button"
                               onClick={() => navigate(`/conversations/${activePath.id}/roadmap`)}
-                              className="p-1.5 rounded-lg hover:bg-zinc-100 hover:text-[#2563eb] transition-colors cursor-pointer border-0 bg-transparent"
+                              className="p-1.5 rounded-lg hover:bg-zinc-100 hover:text-[#2b7fff] transition-colors cursor-pointer border-0 bg-transparent"
                               title="Roadmap"
                             >
                               <Route className="size-3.5" />
@@ -633,13 +674,13 @@ export default function AssistantPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col items-start gap-1 w-full mr-auto py-1"
                   >
-                    <div className="flex items-center gap-2 py-1 text-xs text-[#2563eb]">
+                    <div className="flex items-center gap-2 py-1 text-xs text-[#2b7fff]">
                       <span className="flex gap-1 items-center">
-                        <span className="size-1.5 rounded-full bg-[#2563eb] animate-pulse" />
-                        <span className="size-1.5 rounded-full bg-[#2563eb] animate-pulse [animation-delay:0.2s]" />
-                        <span className="size-1.5 rounded-full bg-[#2563eb] animate-pulse [animation-delay:0.4s]" />
+                        <span className="size-1.5 rounded-full bg-[#2b7fff] animate-pulse" />
+                        <span className="size-1.5 rounded-full bg-[#2b7fff] animate-pulse [animation-delay:0.2s]" />
+                        <span className="size-1.5 rounded-full bg-[#2b7fff] animate-pulse [animation-delay:0.4s]" />
                       </span>
-                      <span className="font-medium text-[#2563eb]">Thinking...</span>
+                      <span className="font-semibold text-[#2b7fff]">Thinking...</span>
                     </div>
                   </motion.div>
                 )}
@@ -651,10 +692,10 @@ export default function AssistantPage() {
         </div>
 
         {/* ─── 3. Floating Bottom Composer (Clean Light Pill Pattern) ───── */}
-        <div className="px-4 sm:px-8 pb-3 pt-1 bg-gradient-to-t from-white via-white to-transparent shrink-0">
+        <div className="px-4 sm:px-8 pb-3 pt-1 bg-gradient-to-t from-slate-50/90 via-slate-50/50 to-transparent shrink-0 relative z-20">
           <div className="max-w-3xl mx-auto flex flex-col items-center gap-2">
             {/* Light Pill Composer */}
-            <div className="w-full bg-[#f4f4f4] rounded-3xl border border-zinc-200 p-3 px-4 shadow-md flex flex-col gap-1.5 focus-within:border-[#2563eb] focus-within:ring-2 focus-within:ring-[#2563eb]/20 transition-all">
+            <div className="w-full bg-white/95 backdrop-blur-xl rounded-3xl border border-zinc-200/90 p-3 px-4 shadow-[0_8px_30px_rgb(0,0,0,0.06)] flex flex-col gap-1.5 focus-within:border-[#2b7fff] focus-within:ring-4 focus-within:ring-[#2b7fff]/10 transition-all">
               {/* Auto-expanding Input Area */}
               <form
                 onSubmit={(e) => {
@@ -695,7 +736,7 @@ export default function AssistantPage() {
                         );
                         textareaRef.current?.focus();
                       }}
-                      className="size-7 rounded-full bg-white hover:bg-zinc-100 text-zinc-700 flex items-center justify-center transition-colors cursor-pointer border border-zinc-200 shadow-2xs"
+                      className="size-7 rounded-full bg-zinc-50 hover:bg-zinc-100 text-zinc-700 flex items-center justify-center transition-colors cursor-pointer border border-zinc-200 shadow-2xs"
                     >
                       <Plus className="size-4" />
                     </button>
@@ -712,8 +753,8 @@ export default function AssistantPage() {
                           type="button"
                           onClick={() => setSelectedMode(mode.id as typeof selectedMode)}
                           className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors cursor-pointer border-0 ${selectedMode === mode.id
-                              ? "bg-white text-zinc-900 font-semibold shadow-xs"
-                              : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 bg-transparent"
+                            ? "bg-[#2b7fff] text-white font-bold shadow-xs"
+                            : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 bg-transparent"
                             }`}
                         >
                           {mode.label}
@@ -729,7 +770,7 @@ export default function AssistantPage() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       disabled={!inputMessage.trim() || isSending}
-                      className="size-8 rounded-full bg-[#2563eb] disabled:bg-zinc-200 text-white disabled:text-zinc-400 flex items-center justify-center transition-all cursor-pointer disabled:cursor-not-allowed hover:bg-[#1d4ed8] shadow-xs border-0"
+                      className="size-8 rounded-full bg-[#2b7fff] disabled:bg-zinc-200 text-white disabled:text-zinc-400 flex items-center justify-center transition-all cursor-pointer disabled:cursor-not-allowed hover:bg-[#2563eb] shadow-xs border-0"
                     >
                       {isSending ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -741,9 +782,6 @@ export default function AssistantPage() {
                 </div>
               </form>
             </div>
-
-            {/* Bottom Disclaimer */}
-
           </div>
         </div>
       </div>

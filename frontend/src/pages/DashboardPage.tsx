@@ -220,6 +220,26 @@ export default function DashboardPage() {
     };
   }, [data, liveStatsSummary]);
 
+  const firstName = useMemo(() => {
+    if (!user?.fullName) {
+      try {
+        const stored = localStorage.getItem("user");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed?.fullName) {
+            const first = parsed.fullName.trim().split(/\s+/)[0];
+            if (first) return first;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      return "Learner";
+    }
+    const first = user.fullName.trim().split(/\s+/)[0];
+    return first || "Learner";
+  }, [user?.fullName]);
+
   // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
@@ -235,8 +255,8 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <h1 className="font-display font-bold text-3xl sm:text-4xl text-[#2563eb] tracking-tight">
-            Welcome back, {user?.fullName?.split(" ")[0] || "Learner"}!
+          <h1 className="font-display font-bold text-3xl sm:text-4xl text-[#2b7fff] tracking-tight">
+            Welcome back, {firstName}!
           </h1>
         </div>
 
