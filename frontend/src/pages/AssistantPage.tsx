@@ -17,8 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { messagesApi, conversationsApi } from "@/lib/api";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 interface MessageItem {
   id?: string;
@@ -206,6 +204,7 @@ export default function AssistantPage() {
         const decoder = new TextDecoder("utf-8");
         let done = false;
         let aiResponseContent = "";
+        let lastUpdate = Date.now();
 
         // Add a placeholder message for the AI
         setMessages((prev) => [
@@ -227,19 +226,28 @@ export default function AssistantPage() {
                   const data = JSON.parse(dataStr);
                   if (data.type === "chunk") {
                     aiResponseContent += data.content;
+                    const now = Date.now();
+                    // Throttle updates to ~40ms to prevent React lag
+                    if (now - lastUpdate > 40) {
+                      setMessages((prev) => {
+                        const newMessages = [...prev];
+                        newMessages[newMessages.length - 1] = {
+                          role: "AI",
+                          content: aiResponseContent,
+                          isStreaming: true,
+                        };
+                        return newMessages;
+                      });
+                      lastUpdate = now;
+                    }
+                  } else if (data.type === "done") {
                     setMessages((prev) => {
                       const newMessages = [...prev];
                       newMessages[newMessages.length - 1] = {
                         role: "AI",
-                        content: aiResponseContent,
-                        isStreaming: true,
+                        content: aiResponseContent, // Ensure final text is set
+                        isStreaming: false,
                       };
-                      return newMessages;
-                    });
-                  } else if (data.type === "done") {
-                    setMessages((prev) => {
-                      const newMessages = [...prev];
-                      newMessages[newMessages.length - 1].isStreaming = false;
                       saveMessagesLocally(newMessages);
                       return newMessages;
                     });
@@ -386,26 +394,8 @@ export default function AssistantPage() {
                       : "bg-white dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800/70 text-zinc-900 dark:text-zinc-50 rounded-tl-none shadow-sm font-sans"
                   }`}
                 >
-                  <div className={`prose prose-sm max-w-none break-words ${isUser ? 'prose-invert' : 'prose-zinc dark:prose-invert'}`}>
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        p: ({ node, ...props }) => <p className="m-0 mb-2 last:mb-0" {...props} />,
-                        ul: ({ node, ...props }) => <ul className="m-0 ml-4 list-disc space-y-1" {...props} />,
-                        ol: ({ node, ...props }) => <ol className="m-0 ml-4 list-decimal space-y-1" {...props} />,
-                        a: ({ node, ...props }) => <a className="text-zinc-900 underline underline-offset-2 dark:text-white" {...props} />,
-                        code: ({ node, inline, ...props }: any) =>
-                          inline ? (
-                            <code className="rounded bg-zinc-200 px-1 py-0.5 text-xs text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200" {...props} />
-                          ) : (
-                            <pre className="overflow-x-auto rounded-lg bg-zinc-800 p-3 text-zinc-100 dark:bg-zinc-900">
-                              <code {...props} />
-                            </pre>
-                          )
-                      }}
-                    >
-                      {msg.content}
-                    </ReactMarkdown>
+                  <div className={`break-words`}>
+                    {msg.content}
                   </div>
                   {msg.isStreaming && <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-zinc-400 align-middle"></span>}
                 </div>

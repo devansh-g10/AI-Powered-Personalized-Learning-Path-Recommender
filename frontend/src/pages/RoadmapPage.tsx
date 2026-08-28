@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { roadmapApi, topicApi } from "@/lib/api";
+import { roadmapApi } from "@/lib/api";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -89,7 +89,6 @@ export default function RoadmapPage() {
   const [userQuestion, setUserQuestion] = useState("");
   const [qaHistory, setQaHistory] = useState<{ question: string; answer: string }[]>([]);
   const [isAsking, setIsAsking] = useState(false);
-  const [streamingAnswer, setStreamingAnswer] = useState("");
 
   // Roadmap Modification Dialog State
   const [isModifying, setIsModifying] = useState(false);
@@ -178,7 +177,6 @@ export default function RoadmapPage() {
     const question = userQuestion.trim();
     setUserQuestion("");
     setIsAsking(true);
-    setStreamingAnswer("");
 
     const sessionStr = localStorage.getItem("session");
     const token = sessionStr ? JSON.parse(sessionStr)?.access_token : "";
@@ -197,19 +195,21 @@ export default function RoadmapPage() {
       if (resp.ok) {
         const json = await resp.json();
         const answer = json.answer || "";
-        // Simulate streaming token-by-token for a ChatGPT-like effect
+        // Simulate streaming token-by-token but grouped to prevent UI lag
         setQaHistory((prev) => [...prev, { question, answer: "" }]);
         let displayed = "";
         const words = answer.split(" ");
-        for (let i = 0; i < words.length; i++) {
-          displayed += (i === 0 ? "" : " ") + words[i];
+        const chunkSize = 3;
+        for (let i = 0; i < words.length; i += chunkSize) {
+          const chunk = words.slice(i, i + chunkSize).join(" ");
+          displayed += (i === 0 ? "" : " ") + chunk;
           const snapshot = displayed;
           setQaHistory((prev) => {
             const updated = [...prev];
             updated[updated.length - 1] = { question, answer: snapshot };
             return updated;
           });
-          await new Promise((r) => setTimeout(r, 18));
+          await new Promise((r) => setTimeout(r, 40));
         }
         setIsAsking(false);
         return;
@@ -233,6 +233,7 @@ export default function RoadmapPage() {
       const decoder = new TextDecoder("utf-8");
       let done = false;
       let accumulated = "";
+      let lastUpdate = Date.now();
 
       while (!done) {
         const { value, done: rd } = await reader.read();
@@ -246,6 +247,17 @@ export default function RoadmapPage() {
               const evt = JSON.parse(line.replace("data: ", ""));
               if (evt.type === "chunk") {
                 accumulated += evt.content;
+                const now = Date.now();
+                if (now - lastUpdate > 40) {
+                  const snap = accumulated;
+                  setQaHistory((prev) => {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = { question, answer: snap };
+                    return updated;
+                  });
+                  lastUpdate = now;
+                }
+              } else if (evt.type === "done") {
                 const snap = accumulated;
                 setQaHistory((prev) => {
                   const updated = [...prev];
@@ -559,11 +571,11 @@ export default function RoadmapPage() {
                     )}
                   </div>
                   <CardTitle className="font-bold text-base leading-6">
-                    {currentSelectedPhase.title}
+                    {currentSelectedPhase?.title}
                   </CardTitle>
                 </div>
                 <Badge variant="outline" className="text-xs">
-                  {currentSelectedPhase.estimatedWeeks
+                  {currentSelectedPhase?.estimatedWeeks
                     ? `${currentSelectedPhase.estimatedWeeks} wks`
                     : "Stage"}
                 </Badge>
@@ -574,7 +586,7 @@ export default function RoadmapPage() {
             </CardHeader>
 
             <CardContent className="flex p-0 flex-col gap-2.5">
-              {currentSelectedPhase.topics.map((topic) => {
+              {(currentSelectedPhase?.topics ?? []).map((topic) => {
                 const isChecked = completedTopicIds.has(topic.topicId);
                 return (
                   <div
@@ -600,7 +612,7 @@ export default function RoadmapPage() {
                       title="Ask AI about this topic"
                       onClick={() => {
                         setActiveQuestionTopic(topic);
-                        setAiAnswer(null);
+                        setQaHistory([]);
                         setUserQuestion("");
                       }}
                       className="text-zinc-400 dark:text-zinc-500 hover:text-[#2b7fff] p-1.5 rounded-lg hover:bg-white dark:hover:bg-zinc-950 transition-colors bg-transparent border-0 cursor-pointer"
@@ -615,7 +627,7 @@ export default function RoadmapPage() {
             <CardFooter className="p-0 pt-2 flex flex-col gap-2">
               <Button
                 onClick={() => {
-                  navigate(`/assistant?topic=${encodeURIComponent(currentSelectedPhase.title)}`);
+                  navigate(`/assistant?topic=${encodeURIComponent(currentSelectedPhase?.title ?? "")}`);
                 }}
                 className="bg-[#2b7fff] text-white hover:bg-[#2563eb] gap-2 w-full shadow-md shadow-[#2b7fff]/20 rounded-xl cursor-pointer"
               >
@@ -640,7 +652,7 @@ export default function RoadmapPage() {
                 {progressPercent >= 60
                   ? "Outstanding velocity! You have completed over 60% of your roadmap. Dive into the Projects stage to build your portfolio assets."
                   : progressPercent > 0
-                  ? `You are steadily progressing through ${currentSelectedPhase.title}. Completing React and State Management this week keeps you on track.`
+                  ? `You are steadily progressing through ${currentSelectedPhase?.title ?? "this phase"}. Completing React and State Management this week keeps you on track.`
                   : "Start by checking off the Semantic HTML and CSS fundamentals. Completing your first stage unlocks verified competency badges in Skills."}
               </p>
             </CardContent>
@@ -778,6 +790,10 @@ export default function RoadmapPage() {
               placeholder="e.g. Focus more on Next.js App Router and full-stack deployment, reduce basic CSS..."
               className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] resize-none"
             />
+
+            {modifyError && (
+              <p className="text-xs text-red-500 font-medium">{modifyError}</p>
+            )}
 
             <div className="flex justify-end gap-2">
               <Button
