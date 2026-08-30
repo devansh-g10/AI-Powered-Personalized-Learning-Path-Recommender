@@ -255,7 +255,20 @@ export default function AssistantPage() {
     let currentConvId = conversationId;
     let remoteSuccess = false;
 
-    if (currentConvId && !currentConvId.startsWith("session-") && !currentConvId.startsWith("conv-")) {
+    // If local or empty conversation ID, attempt to create/sync real backend conversation
+    if (!currentConvId || currentConvId.startsWith("session-") || currentConvId.startsWith("conv-")) {
+      try {
+        const { data: convData } = await conversationsApi.create(activeTopic ? `Tutor: ${activeTopic}` : "Learning Mentorship");
+        if (convData?.conversation?.id) {
+          currentConvId = convData.conversation.id;
+          setConversationId(currentConvId);
+        }
+      } catch {
+        // Continue with local ID if guest or offline
+      }
+    }
+
+    if (currentConvId) {
       try {
         const { data } = await messagesApi.send(currentConvId, text);
         if (data?.message) {
@@ -268,11 +281,11 @@ export default function AssistantPage() {
           };
           const updatedWithAi = [...updatedWithUser, aiMsg];
           setMessages(updatedWithAi);
-          persistMessages(updatedWithAi);
+          persistMessages(updatedWithAi, currentConvId);
           remoteSuccess = true;
         }
       } catch (err) {
-        console.warn("Backend AI endpoint unreachable, switching to grounded contextual mentor engine.", err);
+        console.warn("Backend AI endpoint unreachable, switching to dynamic contextual mentor engine.", err);
       }
     }
 
@@ -296,9 +309,9 @@ export default function AssistantPage() {
 
         const updatedWithAi = [...updatedWithUser, aiMsg];
         setMessages(updatedWithAi);
-        persistMessages(updatedWithAi);
+        persistMessages(updatedWithAi, currentConvId || "local-session");
         setIsSending(false);
-      }, 450);
+      }, 400);
     } else {
       setIsSending(false);
     }
