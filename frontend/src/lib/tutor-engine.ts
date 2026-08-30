@@ -140,7 +140,7 @@ export function generateContextualTutorResponse(
         `            onClick={() => handleSelect(item.id)}\n` +
         `            className={\`p-2 text-sm rounded cursor-pointer \${selectedId === item.id ? 'bg-primary text-white' : 'hover:bg-muted'}\`}\n` +
         `          >\n` +
-        `            {item.name} (${item.value})\n` +
+        `            {item.name} (\${item.value})\n` +
         `          </li>\n` +
         `        ))}\n` +
         `      </ul>\n` +
