@@ -4,6 +4,21 @@ import Redis from "ioredis";
 let redis;
 
 /**
+ * Resolves the Redis connection URL, supporting direct REDIS_URL
+ * or Upstash REST variables.
+ */
+export function getRedisUrl() {
+  if (process.env.REDIS_URL) {
+    return process.env.REDIS_URL;
+  }
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    const rawHost = process.env.UPSTASH_REDIS_REST_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    return `rediss://default:${process.env.UPSTASH_REDIS_REST_TOKEN}@${rawHost}:6379`;
+  }
+  return "redis://localhost:6379";
+}
+
+/**
  * Returns a singleton ioredis client for general cache operations (get/set).
  * maxRetriesPerRequest: 3 — safe for non-blocking Redis commands.
  *
@@ -12,7 +27,8 @@ let redis;
  */
 export function getRedisClient() {
   if (!redis) {
-    redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+    const redisUrl = getRedisUrl();
+    redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       enableReadyCheck: true,
       lazyConnect: true,
@@ -35,12 +51,13 @@ export function getRedisClient() {
  * This must be a SEPARATE connection instance from the shared Redis client.
  */
 export function createBullMQConnection() {
-  const conn = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  const redisUrl = getRedisUrl();
+  const conn = new Redis(redisUrl, {
     maxRetriesPerRequest: null, // Required by BullMQ for blocking commands
     enableReadyCheck: false,
     lazyConnect: false,
   });
-  conn.on("error", (err) => {
+  conn.on("error", () => {
     // Suppress uncaught error event when redis is unavailable
   });
   return conn;
