@@ -88,11 +88,16 @@ export const loginUser = async ({ email, password }) => {
 // ─── Google OAuth — returns redirect URL ─────────────────────────────────────
 // Frontend redirects user to this URL; Supabase handles the OAuth flow.
 
-export const getGoogleOAuthUrl = async () => {
+export const getGoogleOAuthUrl = async (customRedirect) => {
+  const redirectTo =
+    customRedirect ||
+    process.env.GOOGLE_REDIRECT_URL ||
+    "http://localhost:5173/auth/callback";
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: process.env.GOOGLE_REDIRECT_URL, // e.g. http://localhost:5173/auth/callback
+      redirectTo,
       skipBrowserRedirect: true, // prevents server from being redirected — returns URL instead
     },
   });

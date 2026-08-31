@@ -51,7 +51,10 @@ export const login = async (req, res) => {
 
 export const googleOAuth = async (req, res) => {
   try {
-    const url = await getGoogleOAuthUrl();
+    const customRedirect =
+      req.query.redirect_to ||
+      (req.headers.origin ? `${req.headers.origin}/auth/callback` : null);
+    const url = await getGoogleOAuthUrl(customRedirect);
     return res.status(200).json({ url });
   } catch (err) {
     return res.status(500).json({ message: err.message });

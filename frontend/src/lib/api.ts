@@ -71,7 +71,10 @@ export const authApi = {
   login: (data: { email: string; password: string }) =>
     api.post("/auth/login", data),
 
-  getGoogleOAuthUrl: () => api.get("/auth/google"),
+  getGoogleOAuthUrl: (redirectUri?: string) =>
+    api.get("/auth/google", {
+      params: redirectUri ? { redirect_to: redirectUri } : {},
+    }),
 
   syncGoogleProfile: () => api.post("/auth/google/sync"),
 

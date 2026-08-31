@@ -16,22 +16,45 @@ export default function AuthCallbackPage() {
 
     const processCallback = async () => {
       try {
-        // Supabase OAuth puts tokens in the URL hash fragment
-        const hashParams = new URLSearchParams(
-          window.location.hash.substring(1)
-        );
-        const accessToken = hashParams.get("access_token");
-        const refreshToken = hashParams.get("refresh_token");
+        // Supabase OAuth can place tokens in hash fragment or query string
+        const hash = window.location.hash.startsWith("#")
+          ? window.location.hash.substring(1)
+          : window.location.hash;
+        const search = window.location.search.startsWith("?")
+          ? window.location.search.substring(1)
+          : window.location.search;
+
+        const hashParams = new URLSearchParams(hash);
+        const searchParams = new URLSearchParams(search);
+
+        const errorMsg =
+          hashParams.get("error_description") ||
+          searchParams.get("error_description") ||
+          hashParams.get("error") ||
+          searchParams.get("error");
+
+        if (errorMsg) {
+          setError(decodeURIComponent(errorMsg.replace(/\+/g, " ")));
+          return;
+        }
+
+        const accessToken =
+          hashParams.get("access_token") ||
+          searchParams.get("access_token");
+        const refreshToken =
+          hashParams.get("refresh_token") ||
+          searchParams.get("refresh_token");
 
         if (!accessToken) {
-          setError("No access token found. Please try logging in again.");
+          setError("No access token found in callback URL. Please try logging in again.");
           return;
         }
 
         await handleGoogleCallback(accessToken, refreshToken || "");
-        navigate("/", { replace: true });
-      } catch {
-        setError("Failed to complete authentication. Please try again.");
+        navigate("/dashboard", { replace: true });
+      } catch (err: any) {
+        console.error("Authentication callback processing failed:", err);
+        setError(err.message || "Failed to complete authentication. Please try again.");
       }
     };
 
