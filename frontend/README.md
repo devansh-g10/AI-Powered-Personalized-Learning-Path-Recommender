@@ -1,9 +1,42 @@
-# Screen 1
+# 🎨 Frontend Client — AI-Powered Personalized Learning Path Recommender
 
-This is a code bundle for Screen 1. It's based on default Vite project. The original design is available at https://app.flowstep.ai/file?activeFileId=550f84ab-77de-40af-9ac0-932776622f52.
+> Modern, motion-rich React 19 + TypeScript single-page application built with Vite and Tailwind CSS v4.
 
-## Running the code
+---
 
-Run `npm i` and `npm run setup` to install the dependencies.
+## ⚡ Tech Stack & Libraries
+- **Core:** React 19, TypeScript, Vite 7
+- **Styling:** Tailwind CSS v4, PostCSS, `@tailwindcss/postcss`
+- **UI & Icons:** Radix UI Primitives, Shadcn UI Components, Lucide React
+- **Animations:** Framer Motion, GSAP, Lenis Smooth Scroll
+- **Routing & Auth:** React Router DOM v7, Supabase Auth Token Interceptors
+- **Notifications:** Sonner Toast Engine
 
-Run `npm run dev` to start the development server.
+---
+
+## 🚀 Getting Started
+
+### 1. Install Dependencies
+```bash
+npm install
+```
+
+### 2. Configure Environment Variables
+Create a `.env` file in the root of `/frontend`:
+```env
+VITE_API_URL=http://localhost:4000/api
+```
+
+### 3. Run Development Server
+```bash
+npm run dev
+```
+The app will run locally at `http://localhost:5173`.
+
+---
+
+## 📦 Build for Production
+```bash
+npm run build
+```
+The compiled production bundle will be located in the `dist/` directory.

@@ -52,7 +52,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950 relative overflow-hidden py-12">
+    <div className="min-h-screen flex items-center justify-center bg-white relative overflow-hidden py-12">
       {/* Background glows */}
       <img
         src="https://images.unsplash.com/photo-1557683316-973673baf926?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3ODc2NDd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGJsdWUlMjB2aW9sZXQlMjBncmFkaWVudCUyMHNvZnQlMjBnbG93fGVufDF8MHx8fDE3ODcwMzk1NTB8MA&ixlib=rb-4.1.0&q=80&w=400"
@@ -64,14 +64,12 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md px-6">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          <div className="size-10 shadow-lg shadow-[#2b7fff]/30 rounded-xl bg-[#2b7fff] text-blue-50 flex justify-center items-center">
-            <Route className="size-5" />
-          </div>
+          <Route className="size-7 text-[#2b7fff] stroke-[2.5]" />
           <span className="font-bold text-xl tracking-tight">PathAI</span>
         </div>
 
         {/* Card */}
-        <div className="backdrop-blur-xl bg-white/70 border border-zinc-200/60 dark:border-zinc-800/60 rounded-2xl shadow-xl shadow-[#2b7fff]/5 p-8">
+        <div className="backdrop-blur-xl bg-white/70 border border-zinc-200/60 rounded-2xl shadow-xl shadow-[#2b7fff]/5 p-8">
           <div className="text-center mb-6">
             <h1 className="font-bold text-2xl tracking-tight mb-1">
               Welcome back
@@ -93,9 +91,9 @@ export default function LoginPage() {
           </Button>
 
           <div className="flex items-center gap-3 my-4">
-            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
+            <div className="flex-1 h-px bg-zinc-200" />
             <span className="text-[11px] text-[#71717b] uppercase font-semibold">or email sign-in</span>
-            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
+            <div className="flex-1 h-px bg-zinc-200" />
           </div>
 
           {error && (
@@ -108,7 +106,7 @@ export default function LoginPage() {
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="email"
-                className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider"
+                className="text-xs font-semibold text-zinc-700 uppercase tracking-wider"
               >
                 Email
               </label>
@@ -119,7 +117,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="h-10 px-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
+                className="h-10 px-3 rounded-lg border border-zinc-200 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
               />
             </div>
 
@@ -127,7 +125,7 @@ export default function LoginPage() {
               <div className="flex justify-between items-center">
                 <label
                   htmlFor="password"
-                  className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider"
+                  className="text-xs font-semibold text-zinc-700 uppercase tracking-wider"
                 >
                   Password
                 </label>
@@ -147,12 +145,12 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   required
                   minLength={8}
-                  className="h-10 w-full px-3 pr-10 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
+                  className="h-10 w-full px-3 pr-10 rounded-lg border border-zinc-200 bg-white/90 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717b] hover:text-zinc-900 dark:hover:text-zinc-50 bg-transparent border-0 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717b] hover:text-zinc-900 bg-transparent border-0 cursor-pointer"
                 >
                   {showPassword ? (
                     <EyeOff className="size-4" />
@@ -178,9 +176,9 @@ export default function LoginPage() {
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
+            <div className="flex-1 h-px bg-zinc-200" />
             <span className="text-xs text-[#71717b]">or</span>
-            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
+            <div className="flex-1 h-px bg-zinc-200" />
           </div>
 
           {/* Google */}
@@ -188,7 +186,7 @@ export default function LoginPage() {
             type="button"
             variant="outline"
             onClick={handleGoogleLogin}
-            className="w-full h-10 gap-2 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 font-medium text-xs"
+            className="w-full h-10 gap-2 border-zinc-200 hover:bg-zinc-50 font-medium text-xs"
           >
             <svg className="size-4" viewBox="0 0 24 24">
               <path

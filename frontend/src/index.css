@@ -3,9 +3,26 @@
 @import "./tw-animate.css";
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 /* Fluid full height standards */
+html {
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: 100%;
+}
+
+html.lenis, html.lenis body {
+  height: auto;
+  min-height: 100%;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
 .min-h-screen {
   min-height: 100vh;
 }
@@ -34,6 +51,9 @@
 }
 
 body {
+  overflow-x: hidden;
+  width: 100%;
+  min-height: 100%;
   font-size: 16px;
   line-height: 24px;
   letter-spacing: -0.01em;
@@ -42,6 +62,13 @@ body {
   font-family: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 :root {
@@ -101,6 +128,23 @@ h1, h2, h3, .font-heading {
   border-bottom: 1px solid rgba(228, 231, 236, 0.7);
 }
 
+/* ─── Background Patterns ─────────────────────────────────────────────────── */
+.bg-dot-pattern {
+  background-size: 24px 24px;
+  background-image: radial-gradient(rgba(43, 127, 255, 0.1) 1.2px, transparent 1.2px);
+}
+
+.bg-grid-pattern {
+  background-size: 36px 36px;
+  background-image: 
+    linear-gradient(to right, rgba(43, 127, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(43, 127, 255, 0.04) 1px, transparent 1px);
+}
+
+.glow-mesh {
+  background: radial-gradient(circle at 50% 0%, rgba(43, 127, 255, 0.15) 0%, rgba(99, 102, 241, 0.08) 35%, transparent 70%);
+}
+
 /* ─── Keyframe Animations ─────────────────────────────────────────────────── */
 @keyframes float {
   0%, 100% {
@@ -156,6 +200,55 @@ h1, h2, h3, .font-heading {
   background: linear-gradient(90deg, rgba(43, 127, 255, 0) 0%, rgba(43, 127, 255, 0.15) 50%, rgba(43, 127, 255, 0) 100%);
   background-size: 200% 100%;
   animation: shimmer 3s infinite;
+}
+
+/* ─── Animated Gradient Text ──────────────────────────────────────────────── */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* ─── Cursor-Aware Card Highlight ──────────────────────────────────────────── */
+.card-cursor-highlight {
+  position: relative;
+  overflow: hidden;
+}
+.card-cursor-highlight::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(43, 127, 255, 0.06),
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+}
+.card-cursor-highlight:hover::before {
+  opacity: 1;
+}
+
+/* ─── Reduced Motion Override ──────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-slow,
+  .animate-pulse-glow,
+  .animate-shimmer {
+    animation: none !important;
+  }
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @theme inline {
@@ -365,64 +458,4 @@ h1, h2, h3, .font-heading {
 }
 .border-r {
   border-color: var(--color-border);
-}
-
-/* ─── Dark Mode Variables ─────────────────────────────────────────────────── */
-.dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  
-  --card: oklch(0.141 0.005 285.823);
-  --card-foreground: oklch(0.985 0 0);
-  
-  --popover: oklch(0.141 0.005 285.823);
-  --popover-foreground: oklch(0.985 0 0);
-  
-  --primary: oklch(0.623 0.214 259.815);
-  --primary-foreground: oklch(0.985 0 0);
-  
-  --secondary: oklch(0.21 0.006 285.885);
-  --secondary-foreground: oklch(0.985 0 0);
-  
-  --muted: oklch(0.21 0.006 285.885);
-  --muted-foreground: oklch(0.7 0.016 285.938);
-  
-  --accent: oklch(0.21 0.006 285.885);
-  --accent-foreground: oklch(0.985 0 0);
-  
-  --destructive: oklch(0.396 0.141 25.723);
-  
-  --border: oklch(0.21 0.006 285.885);
-  --input: oklch(0.21 0.006 285.885);
-  --ring: oklch(0.623 0.214 259.815);
-  
-  --sidebar: oklch(0.141 0.005 285.823);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.623 0.214 259.815);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.21 0.006 285.885);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.21 0.006 285.885);
-  --sidebar-ring: oklch(0.623 0.214 259.815);
-}
-
-/* ─── Dark Mode Glassmorphism ────────────────────────────────────────── */
-.dark .glass-card {
-  background: rgba(9, 9, 11, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
-}
-.dark .glass-card-hover:hover {
-  background: rgba(9, 9, 11, 0.88);
-  border-color: rgba(43, 127, 255, 0.35);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.1);
-}
-.dark .glass-pill {
-  background: rgba(9, 9, 11, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.1);
-}
-.dark .glass-header {
-  background: rgba(9, 9, 11, 0.82);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }

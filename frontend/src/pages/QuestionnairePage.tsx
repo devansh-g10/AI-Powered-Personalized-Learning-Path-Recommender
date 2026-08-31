@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { contextApi, roadmapApi, conversationsApi } from "@/lib/api";
+import { dispatchProgressUpdate } from "@/lib/learning-data";
 
 const popularGoalPresets = [
   {
@@ -43,8 +44,7 @@ const popularGoalPresets = [
 
 export default function QuestionnairePage() {
   const { id: routeConvId } = useParams<{ id: string }>();
-  const [generatedConvId] = useState(() => `conv-${Date.now()}`);
-  const conversationId = routeConvId || generatedConvId;
+  const conversationId = routeConvId || `conv-${Date.now()}`;
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
@@ -254,109 +254,41 @@ export default function QuestionnairePage() {
     // Save context locally
     localStorage.setItem(`context_${activeConvId}`, JSON.stringify(contextPayload));
 
+    let roadmapResult: any = null;
+
     try {
       await contextApi.save(activeConvId, contextPayload);
       setStatusMessage("AI is designing your custom learning roadmap...");
-
-      // ── SSE Streaming Roadmap Generation ──────────────────────────────────
-      const sessionStr = localStorage.getItem("session");
-      const token = sessionStr ? JSON.parse(sessionStr)?.access_token : "";
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
-      const isDemoToken = token?.startsWith("demo-") || token?.startsWith("token-");
-
-      if (!isDemoToken && token) {
-        const response = await fetch(`${apiUrl}/ai/conversations/${activeConvId}/roadmap`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "text/event-stream",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({}),
-        });
-
-        if (response.ok && response.body) {
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder("utf-8");
-          let done = false;
-          let savedRoadmap: object | null = null;
-
-          while (!done) {
-            const { value, done: readerDone } = await reader.read();
-            done = readerDone;
-            if (value) {
-              const text = decoder.decode(value, { stream: true });
-              const lines = text.split("\n\n");
-              for (const line of lines) {
-                if (line.startsWith("data: ")) {
-                  try {
-                    const evt = JSON.parse(line.replace("data: ", ""));
-                    if (evt.type === "status") {
-                      setStatusMessage(evt.message || "Generating your roadmap…");
-                    } else if (evt.type === "roadmap") {
-                      savedRoadmap = evt.roadmap;
-                    }
-                  } catch { /* partial chunk */ }
-                }
-              }
-            }
-          }
-
-          if (savedRoadmap) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const roadmapObj = (savedRoadmap as any).rawJson || savedRoadmap;
-            localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(roadmapObj));
-            setTimeout(() => navigate(`/conversations/${activeConvId}/roadmap`), 400);
-            return;
-          }
-        }
-      }
-
-      // Fallback: non-streaming JSON request (for demo users or streaming failure)
-      try {
-        const { data } = await roadmapApi.generate(activeConvId);
-        if (data?.roadmap) {
-          const roadmapObj = data.roadmap.rawJson || data.roadmap;
-          localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(roadmapObj));
-        }
-      } catch {
-        // Offline fallback: generate structured custom roadmap
-        const generated = generateOfflineCustomRoadmap();
-        localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(generated));
-
-        // Add to local conversations list in dashboard
-        const existingList = JSON.parse(localStorage.getItem("local_conversations") || "[]");
-        const newConv = {
-          id: activeConvId,
-          title: learningGoal.trim(),
-          status: "ACTIVE",
-          createdAt: new Date().toISOString(),
-          progress: 0,
-          category: "Custom Path",
-          learningContext: contextPayload,
-          roadmap: generated,
-        };
-        localStorage.setItem("local_conversations", JSON.stringify([newConv, ...existingList]));
+      const { data } = await roadmapApi.generate(activeConvId);
+      if (data?.roadmap) {
+        roadmapResult = data.roadmap.rawJson || data.roadmap;
+        localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(roadmapResult));
       }
     } catch {
       // Offline fallback: generate structured custom roadmap
-      const generated = generateOfflineCustomRoadmap();
-      localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(generated));
-
-      // Add to local conversations list in dashboard
-      const existingList = JSON.parse(localStorage.getItem("local_conversations") || "[]");
-      const newConv = {
-        id: activeConvId,
-        title: learningGoal.trim(),
-        status: "ACTIVE",
-        createdAt: new Date().toISOString(),
-        progress: 0,
-        category: "Custom Path",
-        learningContext: contextPayload,
-        roadmap: generated,
-      };
-      localStorage.setItem("local_conversations", JSON.stringify([newConv, ...existingList]));
+      roadmapResult = generateOfflineCustomRoadmap();
+      localStorage.setItem(`roadmap_${activeConvId}`, JSON.stringify(roadmapResult));
     }
+
+    // Always ensure local conversation record exists for immediate dashboard sync
+    const category = targetOutcome?.includes("Job") ? "Career Path" : targetOutcome?.includes("Agent") || learningGoal?.toLowerCase().includes("ai") ? "AI & Full-Stack" : "Custom Path";
+    const existingList = JSON.parse(localStorage.getItem("local_conversations") || "[]").filter((c: any) => c.id !== activeConvId);
+    const newConv = {
+      id: activeConvId,
+      title: learningGoal.trim() || "My Learning Path",
+      status: "ACTIVE",
+      createdAt: new Date().toISOString(),
+      progress: 0,
+      category,
+      learningContext: contextPayload,
+      roadmap: roadmapResult,
+    };
+    localStorage.setItem("local_conversations", JSON.stringify([newConv, ...existingList]));
+
+    dispatchProgressUpdate({
+      action: "learning_path_created",
+      pathId: activeConvId,
+    });
 
     // Navigate to the newly crafted roadmap
     setTimeout(() => {
@@ -392,7 +324,7 @@ export default function QuestionnairePage() {
                   ? "w-8 bg-[#2b7fff]"
                   : step > idx + 1
                   ? "w-2 bg-emerald-500"
-                  : "w-2 bg-zinc-200 dark:bg-zinc-700"
+                  : "w-2 bg-zinc-200"
               }`}
             />
           ))}
@@ -406,18 +338,18 @@ export default function QuestionnairePage() {
       )}
 
       {isSubmitting ? (
-        <Card className="p-12 text-center flex flex-col items-center justify-center gap-6 backdrop-blur-xl bg-white/70 border-zinc-200/60 dark:border-zinc-800/60 shadow-xl">
+        <Card className="p-12 text-center flex flex-col items-center justify-center gap-6 backdrop-blur-xl bg-white/70 border-zinc-200/60 shadow-xl">
           <div className="relative flex items-center justify-center">
             <div className="size-20 rounded-full border-4 border-[#2b7fff]/20 border-t-[#2b7fff] animate-spin" />
             <Sparkles className="size-8 text-[#2b7fff] absolute animate-pulse" />
           </div>
           <div className="flex flex-col gap-2 max-w-sm">
-            <h3 className="font-bold text-xl text-zinc-900 dark:text-zinc-50">Crafting Your Roadmap</h3>
+            <h3 className="font-bold text-xl text-zinc-900">Crafting Your Roadmap</h3>
             <p className="text-sm text-[#71717b]">{statusMessage}</p>
           </div>
         </Card>
       ) : (
-        <Card className="backdrop-blur-xl bg-white/70 border-zinc-200/60 dark:border-zinc-800/60 shadow-xl shadow-[#2b7fff]/5 p-8">
+        <Card className="backdrop-blur-xl bg-white/70 border-zinc-200/60 shadow-xl shadow-[#2b7fff]/5 p-8">
           {/* STEP 1: Goal & Motivation */}
           {step === 1 && (
             <div className="flex flex-col gap-6">
@@ -433,7 +365,7 @@ export default function QuestionnairePage() {
 
               {/* Quick Goal Presets */}
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">
                   Popular Goal Templates:
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -445,7 +377,7 @@ export default function QuestionnairePage() {
                       className={`p-3 rounded-xl border text-left text-xs transition-all cursor-pointer ${
                         learningGoal === preset.goal
                           ? "border-[#2b7fff] bg-[#2b7fff]/10 text-[#2b7fff] font-bold ring-1 ring-[#2b7fff]"
-                          : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-zinc-300 text-zinc-700 dark:text-zinc-300"
+                          : "border-zinc-200 bg-white hover:border-zinc-300 text-zinc-700"
                       }`}
                     >
                       {preset.goal}
@@ -456,7 +388,7 @@ export default function QuestionnairePage() {
 
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  <label className="text-sm font-semibold text-zinc-800">
                     Primary Learning Goal <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -464,12 +396,12 @@ export default function QuestionnairePage() {
                     value={learningGoal}
                     onChange={(e) => setLearningGoal(e.target.value)}
                     placeholder="e.g. Frontend Engineering with React & Next.js"
-                    className="h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
+                    className="h-11 px-4 rounded-xl border border-zinc-200 bg-white text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  <label className="text-sm font-semibold text-zinc-800">
                     Why do you want to learn this? (Motivation)
                   </label>
                   <textarea
@@ -477,7 +409,7 @@ export default function QuestionnairePage() {
                     onChange={(e) => setMotivation(e.target.value)}
                     rows={3}
                     placeholder="e.g. Transitioning careers, preparing for tech interviews, building a SaaS startup..."
-                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all resize-none"
+                    className="p-3 rounded-xl border border-zinc-200 bg-white text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all resize-none"
                   />
                 </div>
               </div>
@@ -511,7 +443,7 @@ export default function QuestionnairePage() {
                       className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
                         currentLevel === lvl.id
                           ? "border-[#2b7fff] bg-[#2b7fff]/5 ring-2 ring-[#2b7fff]/20"
-                          : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 bg-white dark:bg-zinc-950"
+                          : "border-zinc-200 hover:border-zinc-300 bg-white"
                       }`}
                     >
                       <div className="font-semibold text-sm">{lvl.label}</div>
@@ -521,7 +453,7 @@ export default function QuestionnairePage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  <label className="text-sm font-semibold text-zinc-800">
                     Existing Skills / Tools you already know
                   </label>
                   <div className="flex gap-2">
@@ -531,7 +463,7 @@ export default function QuestionnairePage() {
                       onChange={(e) => setSkillsInput(e.target.value)}
                       onKeyDown={handleKeyDownSkill}
                       placeholder="Type a skill and press Enter (e.g. HTML, JavaScript, Git)"
-                      className="h-10 px-3 flex-1 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
+                      className="h-10 px-3 flex-1 rounded-xl border border-zinc-200 bg-white text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
                     />
                     <Button
                       type="button"
@@ -548,13 +480,13 @@ export default function QuestionnairePage() {
                         <Badge
                           key={sk}
                           variant="secondary"
-                          className="bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5"
+                          className="bg-zinc-100 text-zinc-800 text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5"
                         >
                           {sk}
                           <button
                             type="button"
                             onClick={() => handleRemoveSkill(sk)}
-                            className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 font-bold ml-1 cursor-pointer"
+                            className="text-zinc-400 hover:text-zinc-700 font-bold ml-1 cursor-pointer"
                           >
                             ×
                           </button>
@@ -565,7 +497,7 @@ export default function QuestionnairePage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  <label className="text-sm font-semibold text-zinc-800">
                     What are you currently studying/practicing? (Optional)
                   </label>
                   <input
@@ -573,7 +505,7 @@ export default function QuestionnairePage() {
                     value={currentlyLearning}
                     onChange={(e) => setCurrentlyLearning(e.target.value)}
                     placeholder="e.g. Async JavaScript & promises"
-                    className="h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
+                    className="h-10 px-3 rounded-xl border border-zinc-200 bg-white text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
                   />
                 </div>
               </div>
@@ -595,7 +527,7 @@ export default function QuestionnairePage() {
 
               <div className="flex flex-col gap-5">
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  <label className="text-sm font-semibold text-zinc-800">
                     Depth Preference
                   </label>
                   <div className="grid grid-cols-3 gap-3">
@@ -611,7 +543,7 @@ export default function QuestionnairePage() {
                         className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
                           depthPreference === dp.id
                             ? "border-[#2b7fff] bg-[#2b7fff]/5 ring-2 ring-[#2b7fff]/20"
-                            : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 bg-white dark:bg-zinc-950"
+                            : "border-zinc-200 hover:border-zinc-300 bg-white"
                         }`}
                       >
                         <div className="font-semibold text-sm">{dp.label}</div>
@@ -623,7 +555,7 @@ export default function QuestionnairePage() {
 
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center">
-                    <label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                    <label className="text-sm font-semibold text-zinc-800">
                       Weekly Hours Available: <span className="text-[#2b7fff] font-bold">{weeklyHours} hrs/week</span>
                     </label>
                   </div>
@@ -661,7 +593,7 @@ export default function QuestionnairePage() {
 
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  <label className="text-sm font-semibold text-zinc-800">
                     Target Outcome / Dream Project
                   </label>
                   <textarea
@@ -669,12 +601,12 @@ export default function QuestionnairePage() {
                     onChange={(e) => setTargetOutcome(e.target.value)}
                     rows={3}
                     placeholder="e.g. Build and deploy a full-stack SaaS with payments, auth, and AI features"
-                    className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all resize-none"
+                    className="p-3 rounded-xl border border-zinc-200 bg-white text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all resize-none"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  <label className="text-sm font-semibold text-zinc-800">
                     What would you like to tackle right after this? (Next to learn)
                   </label>
                   <input
@@ -682,12 +614,12 @@ export default function QuestionnairePage() {
                     value={nextToLearn}
                     onChange={(e) => setNextToLearn(e.target.value)}
                     placeholder="e.g. React Native or Rust backend"
-                    className="h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
+                    className="h-10 px-3 rounded-xl border border-zinc-200 bg-white text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff]"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  <label className="text-sm font-semibold text-zinc-800">
                     Any specific tools, preferences or constraints?
                   </label>
                   <input
@@ -695,7 +627,7 @@ export default function QuestionnairePage() {
                     value={preferences}
                     onChange={(e) => setPreferences(e.target.value)}
                     placeholder="e.g. Prefer project-based learning, TypeScript only, ignore GraphQL"
-                    className="h-11 px-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
+                    className="h-11 px-4 rounded-xl border border-zinc-200 bg-white text-sm outline-none focus:ring-2 focus:ring-[#2b7fff]/30 focus:border-[#2b7fff] transition-all"
                   />
                 </div>
               </div>
@@ -703,7 +635,7 @@ export default function QuestionnairePage() {
           )}
 
           {/* Footer Controls */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-zinc-200/60 dark:border-zinc-800/60">
+          <div className="flex items-center justify-between mt-8 pt-6 border-t border-zinc-200/60">
             {step > 1 ? (
               <Button
                 type="button"

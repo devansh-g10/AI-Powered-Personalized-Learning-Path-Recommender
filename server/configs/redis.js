@@ -35,11 +35,15 @@ export function getRedisClient() {
  * This must be a SEPARATE connection instance from the shared Redis client.
  */
 export function createBullMQConnection() {
-  return new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  const conn = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
     maxRetriesPerRequest: null, // Required by BullMQ for blocking commands
     enableReadyCheck: false,
     lazyConnect: false,
   });
+  conn.on("error", (err) => {
+    // Suppress uncaught error event when redis is unavailable
+  });
+  return conn;
 }
 
 /**
