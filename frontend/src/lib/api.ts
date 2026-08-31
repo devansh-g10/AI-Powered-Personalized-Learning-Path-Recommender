@@ -103,6 +103,84 @@ export const messagesApi = {
 
   send: (conversationId: string, message: string) =>
     api.post(`/ai/conversations/${conversationId}/messages`, { message }),
+
+  sendStream: async (
+    conversationId: string,
+    message: string,
+    onChunk: (accumulated: string, delta: string) => void,
+    signal?: AbortSignal
+  ) => {
+    const session = localStorage.getItem("session");
+    let token = "";
+    if (session) {
+      try {
+        token = JSON.parse(session).access_token || "";
+      } catch {
+        // ignore
+      }
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/ai/conversations/${conversationId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ message }),
+        signal,
+      }
+    );
+
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => ({}));
+      throw new Error(errJson.message || `Request failed with status ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error("Response body not readable");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let accumulated = "";
+    let messageId = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data:")) continue;
+        const dataStr = trimmed.slice(5).trim();
+        if (!dataStr) continue;
+
+        try {
+          const parsed = JSON.parse(dataStr);
+          if (parsed.type === "metadata" && parsed.messageId) {
+            messageId = parsed.messageId;
+          } else if (parsed.type === "chunk" && parsed.content) {
+            accumulated += parsed.content;
+            onChunk(accumulated, parsed.content);
+          } else if (parsed.type === "done") {
+            // Done
+          }
+        } catch {
+          // ignore parse errors on individual SSE frames
+        }
+      }
+    }
+
+    return { message: accumulated, messageId };
+  },
 };
 
 // ─── Learning Context API ─────────────────────────────────────────────────────

@@ -231,18 +231,26 @@ export default function AssistantPage() {
 
   // ─── 5. Message Sender ───────────────────────────────────────────────────────
   const handleSendMessage = async (textToSend?: string) => {
-    const text = (textToSend || inputMessage).trim();
-    if (!text || isSending) return;
+    const rawText = (textToSend || inputMessage).trim();
+    if (!rawText || isSending) return;
 
     setInputMessage("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
 
+    // Format text with mode context if special mode is selected
+    let textWithMode = rawText;
+    if (selectedMode === "code" && !rawText.toLowerCase().includes("code")) {
+      textWithMode = `[Focus: Code & Implementation]\n${rawText}`;
+    } else if (selectedMode === "deep" && !rawText.toLowerCase().includes("deep")) {
+      textWithMode = `[Focus: Deep Architectural Analysis & Trade-offs]\n${rawText}`;
+    }
+
     const tempUserMsg: MessageItem = {
       id: `msg-${Date.now()}`,
       role: "HUMAN",
-      content: text,
+      content: rawText,
       createdAt: new Date().toISOString(),
       topicTag: activeTopic,
     };
@@ -268,38 +276,58 @@ export default function AssistantPage() {
       }
     }
 
-    if (currentConvId) {
+    const aiMsgId = `ai-${Date.now()}`;
+
+    if (currentConvId && !currentConvId.startsWith("session-default")) {
       try {
-        const { data } = await messagesApi.send(currentConvId, text);
-        if (data?.message) {
-          const aiMsg: MessageItem = {
-            id: data.messageId || `ai-${Date.now()}`,
+        const res = await messagesApi.sendStream(currentConvId, textWithMode, (accumulated) => {
+          setMessages((prev) => {
+            const lastMsg = prev[prev.length - 1];
+            if (lastMsg && lastMsg.role === "AI" && lastMsg.id === aiMsgId) {
+              return prev.map((m) => (m.id === aiMsgId ? { ...m, content: accumulated } : m));
+            }
+            return [
+              ...prev,
+              {
+                id: aiMsgId,
+                role: "AI",
+                content: accumulated,
+                createdAt: new Date().toISOString(),
+                topicTag: activeTopic,
+              },
+            ];
+          });
+        });
+
+        if (res?.message) {
+          const finalAiMsg: MessageItem = {
+            id: res.messageId || aiMsgId,
             role: "AI",
-            content: data.message,
+            content: res.message,
             createdAt: new Date().toISOString(),
             topicTag: activeTopic,
           };
-          const updatedWithAi = [...updatedWithUser, aiMsg];
-          setMessages(updatedWithAi);
-          persistMessages(updatedWithAi, currentConvId);
+          const finalMessages = [...updatedWithUser, finalAiMsg];
+          setMessages(finalMessages);
+          persistMessages(finalMessages, currentConvId);
           remoteSuccess = true;
         }
       } catch (err) {
-        console.warn("Backend AI endpoint unreachable, switching to dynamic contextual mentor engine.", err);
+        console.warn("Backend AI streaming unavailable, falling back to dynamic contextual mentor engine.", err);
       }
     }
 
     if (!remoteSuccess) {
       setTimeout(() => {
         const tutorResult = generateContextualTutorResponse(
-          text,
+          rawText,
           activeTopic,
           activePath,
           skillCompetencies
         );
 
         const aiMsg: MessageItem = {
-          id: `ai-${Date.now()}`,
+          id: aiMsgId,
           role: "AI",
           content: tutorResult.content,
           createdAt: new Date().toISOString(),
@@ -311,7 +339,7 @@ export default function AssistantPage() {
         setMessages(updatedWithAi);
         persistMessages(updatedWithAi, currentConvId || "local-session");
         setIsSending(false);
-      }, 400);
+      }, 350);
     } else {
       setIsSending(false);
     }

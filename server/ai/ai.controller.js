@@ -205,44 +205,84 @@ export const sendMessageHandler = async (req, res) => {
     const { humanMessageId, aiMessageId } = createMessageIds();
     const now = new Date().toISOString();
 
-    // ── Step 7: Setup SSE headers ─────────────────────────────────────────────
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
+    const wantsStream =
+      req.headers.accept?.includes("text/event-stream") ||
+      req.query.stream === "true" ||
+      req.body.stream === true;
 
-    // Send initial metadata
-    res.write(`data: ${JSON.stringify({ type: "metadata", messageId: aiMessageId, conversationId })}\n\n`);
+    if (wantsStream) {
+      // ── Step 7: Setup SSE headers ─────────────────────────────────────────────
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
 
-    // ── Step 8: Stream response chunks ────────────────────────────────────────
-    let fullResponse = "";
-    for await (const chunk of stream) {
-      const content = chunk.content;
-      if (content) {
-        fullResponse += content;
-        res.write(`data: ${JSON.stringify({ type: "chunk", content })}\n\n`);
+      // Send initial metadata
+      res.write(`data: ${JSON.stringify({ type: "metadata", messageId: aiMessageId, conversationId })}\n\n`);
+
+      // ── Step 8: Stream response chunks ────────────────────────────────────────
+      let fullResponse = "";
+      for await (const chunk of stream) {
+        const content = chunk.content;
+        if (content) {
+          fullResponse += content;
+          res.write(`data: ${JSON.stringify({ type: "chunk", content })}\n\n`);
+        }
       }
-    }
 
-    // End stream
-    res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
-    res.end();
+      // End stream
+      res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+      res.end();
 
-    // ── Step 9: Enqueue persistence (async, after response sent) ──────────────
-    await enqueuePersistenceJob({
-      conversationId,
-      userId,
-      humanMessage: {
-        id: humanMessageId,
-        content: message,
+      // ── Step 9: Enqueue persistence (async, after response sent) ──────────────
+      await enqueuePersistenceJob({
+        conversationId,
+        userId,
+        humanMessage: {
+          id: humanMessageId,
+          content: message,
+          createdAt: now,
+        },
+        aiMessage: {
+          id: aiMessageId,
+          content: fullResponse,
+          metadata: { type: "chat" },
+          createdAt: new Date().toISOString(),
+        },
+      });
+    } else {
+      // JSON response mode (collect full stream)
+      let fullResponse = "";
+      for await (const chunk of stream) {
+        const content = chunk.content;
+        if (content) {
+          fullResponse += content;
+        }
+      }
+
+      // Enqueue persistence (async)
+      await enqueuePersistenceJob({
+        conversationId,
+        userId,
+        humanMessage: {
+          id: humanMessageId,
+          content: message,
+          createdAt: now,
+        },
+        aiMessage: {
+          id: aiMessageId,
+          content: fullResponse,
+          metadata: { type: "chat" },
+          createdAt: new Date().toISOString(),
+        },
+      });
+
+      return res.status(200).json({
+        messageId: aiMessageId,
+        message: fullResponse,
+        conversationId,
         createdAt: now,
-      },
-      aiMessage: {
-        id: aiMessageId,
-        content: fullResponse,
-        metadata: { type: "chat" },
-        createdAt: new Date().toISOString(),
-      },
-    });
+      });
+    }
   } catch (err) {
     if (err.message === "Forbidden") return res.status(403).json({ message: "Forbidden" });
     if (err.message === "Conversation not found")
