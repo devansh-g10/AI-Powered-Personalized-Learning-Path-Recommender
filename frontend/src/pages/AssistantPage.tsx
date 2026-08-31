@@ -41,6 +41,8 @@ export default function AssistantPage() {
   const { id: routeConvId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const topicParam = searchParams.get("topic");
+  const queryPathId = searchParams.get("pathId") || searchParams.get("convId");
+  const targetIdParam = routeConvId || queryPathId;
   const navigate = useNavigate();
 
   // ─── Live Learning Context State ──────────────────────────────────────────────
@@ -50,7 +52,7 @@ export default function AssistantPage() {
   const [activeTopic, setActiveTopic] = useState<string>(topicParam || "React 19 & Full-Stack Architecture");
 
   // ─── Chat & Sessions State ────────────────────────────────────────────────────
-  const [conversationId, setConversationId] = useState<string>(routeConvId || "session-default");
+  const [conversationId, setConversationId] = useState<string>(targetIdParam || "session-default");
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedMode, setSelectedMode] = useState<"general" | "code" | "deep" | "practice">("general");
@@ -85,18 +87,49 @@ export default function AssistantPage() {
         setSkillCompetencies(fullData.skillCompetencies);
 
         // Determine active path
-        let current = fullData.learningPaths[0] || null;
-        if (routeConvId) {
-          const match = fullData.learningPaths.find((p) => p.id === routeConvId);
-          if (match) current = match;
-        } else if (fullData.continueLearning) {
-          current = fullData.continueLearning;
+        let current: LearningPathItem | null = null;
+        if (targetIdParam) {
+          current = fullData.learningPaths.find((p) => p.id === targetIdParam) || null;
+          // If not yet in fullData.learningPaths, attempt direct localStorage load
+          if (!current) {
+            const rawRoadmap = localStorage.getItem(`roadmap_${targetIdParam}`);
+            const rawContext = localStorage.getItem(`context_${targetIdParam}`);
+            if (rawRoadmap || rawContext) {
+              const parsedRoadmap = rawRoadmap ? JSON.parse(rawRoadmap) : null;
+              const parsedContext = rawContext ? JSON.parse(rawContext) : null;
+              current = {
+                id: targetIdParam,
+                title: parsedRoadmap?.objective || parsedContext?.learningGoal || "Custom Learning Path",
+                category: parsedContext?.targetOutcome || "AI & Engineering",
+                status: "ACTIVE",
+                progress: 0,
+                totalTopics: parsedRoadmap?.phases?.flatMap((p: any) => p.topics)?.length || 5,
+                completedTopicsCount: 0,
+                currentMilestone: parsedRoadmap?.phases?.[0]?.topics?.[0]?.title || parsedRoadmap?.phases?.[0]?.title || "Getting Started",
+                currentPhaseTitle: parsedRoadmap?.phases?.[0]?.title || "Phase 1",
+                nextMilestone: parsedRoadmap?.phases?.[0]?.topics?.[1]?.title || "Phase 2",
+                remainingHours: 20,
+                createdAt: new Date().toISOString(),
+                learningContext: parsedContext,
+                roadmap: parsedRoadmap,
+              };
+            }
+          }
+        }
+
+        if (!current) {
+          if (fullData.continueLearning) {
+            current = fullData.continueLearning;
+          } else if (fullData.learningPaths.length > 0) {
+            current = fullData.learningPaths[0];
+          }
         }
 
         if (current) {
           setActivePath(current);
           const currentTopic = topicParam || current.currentMilestone || current.title;
           setActiveTopic(currentTopic);
+          setConversationId(current.id);
         }
 
         // Load sessions: Check user-saved localStorage sessions first
@@ -129,14 +162,31 @@ export default function AssistantPage() {
           } catch {
             // Backend offline
           }
-          localStorage.setItem("pathai_chat_sessions", JSON.stringify(initialSessions));
         }
 
-        setSessions(initialSessions);
-        if (initialSessions.length > 0) {
-          if (!routeConvId && !conversationId) {
-            setConversationId(initialSessions[0].id);
+        // If targetIdParam is present, guarantee it is present in the sessions list
+        if (current) {
+          const exists = initialSessions.some((s) => s.id === current!.id);
+          if (!exists) {
+            const newSessionItem: ChatSession = {
+              id: current.id,
+              title: current.title,
+              topicTag: current.category || "Live Mentorship",
+              lastMessage: `Focus on ${topicParam || current.currentMilestone || current.title}`,
+              updatedAt: new Date().toISOString(),
+              pathId: current.id,
+            };
+            initialSessions = [newSessionItem, ...initialSessions];
           }
+        }
+
+        localStorage.setItem("pathai_chat_sessions", JSON.stringify(initialSessions));
+        setSessions(initialSessions);
+
+        if (current) {
+          setConversationId(current.id);
+        } else if (initialSessions.length > 0) {
+          setConversationId(initialSessions[0].id);
         } else {
           setConversationId("");
           setMessages([]);
@@ -149,7 +199,7 @@ export default function AssistantPage() {
     };
 
     loadLiveContextAndSessions();
-  }, [routeConvId, topicParam]);
+  }, [targetIdParam, topicParam]);
 
   // ─── 2. Load Messages for Active Conversation from Backend or Local Store ───
   useEffect(() => {
@@ -174,7 +224,7 @@ export default function AssistantPage() {
       try {
         setIsLoading(true);
         const { data } = await messagesApi.list(activeId);
-        if (data?.messages && Array.isArray(data.messages)) {
+        if (data?.messages && Array.isArray(data.messages) && data.messages.length > 0) {
           setMessages(data.messages);
           localStorage.setItem(`messages_${activeId}`, JSON.stringify(data.messages));
           return;
@@ -185,14 +235,29 @@ export default function AssistantPage() {
         setIsLoading(false);
       }
 
-      // If empty, set clean state
-      if (!stored) {
-        setMessages([]);
+      // If newly opened roadmap session with no prior messages, seed contextual greeting
+      if (activePath && activePath.id === activeId) {
+        const goalStr = activePath.learningContext?.learningGoal ? `\n- **Target Goal:** ${activePath.learningContext.learningGoal}` : "";
+        const levelStr = activePath.learningContext?.currentLevel ? `\n- **Current Level:** ${activePath.learningContext.currentLevel}` : "";
+        const seedMsg: MessageItem = {
+          id: `welcome-${activeId}`,
+          role: "AI",
+          content: `### 🎯 Grounded Mentorship: **${activePath.title}**\n\nI have loaded your complete roadmap context:${goalStr}${levelStr}\n- **Active Milestone:** **${activeTopic}**\n- **Phase:** ${activePath.currentPhaseTitle || "Phase 1"}\n\nHow would you like to explore **${activeTopic}**? Ask any question, paste your code for review, or select a starter action below!`,
+          createdAt: new Date().toISOString(),
+          topicTag: activeTopic,
+        };
+        const initialList = [seedMsg];
+        setMessages(initialList);
+        localStorage.setItem(`messages_${activeId}`, JSON.stringify(initialList));
+        return;
       }
+
+      // Default empty
+      setMessages([]);
     };
 
     loadMessagesForSession();
-  }, [conversationId, sessions]);
+  }, [conversationId, activePath, activeTopic, sessions]);
 
   const persistMessages = (newMsgs: MessageItem[], targetId = conversationId) => {
     if (!targetId) return;
@@ -215,10 +280,10 @@ export default function AssistantPage() {
     });
   };
 
-  // ─── 4. Quick Clean Prompt Starters (Only 2 Main Actions) ───────────────────
+  // ─── 4. Quick Clean Prompt Starters (3 Contextual Actions) ───────────────────
   const cleanPromptSuggestions = [
     {
-      label: "Explain Concepts",
+      label: `Explain ${activeTopic.length > 24 ? activeTopic.slice(0, 24) + "..." : activeTopic}`,
       prompt: `Please explain the core concepts, mental model, and production best practices for "${activeTopic}". Include a clean TypeScript code example.`,
       icon: Zap,
     },
@@ -226,6 +291,11 @@ export default function AssistantPage() {
       label: "Review Code",
       prompt: `Can you review my code for "${activeTopic}"? I want feedback on architecture, type safety, and edge-case resilience.`,
       icon: Code2,
+    },
+    {
+      label: "Practice Challenge",
+      prompt: `Give me a hands-on coding challenge and real-world test case to verify my mastery of "${activeTopic}".`,
+      icon: CheckCircle2,
     },
   ];
 
@@ -541,8 +611,48 @@ export default function AssistantPage() {
 
       {/* ─── 2. Main Canvas ───────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 bg-white h-full relative text-zinc-900 z-10">
-        {/* Floating Sidebar Open Trigger if Sidebar is Hidden */}
-        {!sidebarOpen && (
+        {/* Active Learning Context Banner */}
+        {activePath && (
+          <div className="px-4 sm:px-8 py-2.5 border-b border-zinc-100 bg-slate-50/90 backdrop-blur-xs flex items-center justify-between text-xs text-zinc-600 shrink-0 select-none">
+            <div className="flex items-center gap-2 min-w-0">
+              {!sidebarOpen && (
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(true)}
+                  className="p-1 rounded-md bg-white shadow-2xs border border-zinc-200 text-[#2b7fff] hover:bg-blue-50 transition-colors cursor-pointer mr-1"
+                  title="Open sidebar"
+                >
+                  <PanelLeft className="size-3.5" />
+                </button>
+              )}
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-[#2b7fff] font-bold border border-[#2b7fff]/20 text-[11px] truncate max-w-[200px] sm:max-w-xs">
+                <Route className="size-3 shrink-0" />
+                <span className="truncate">{activePath.title}</span>
+              </span>
+              <span className="text-zinc-400 hidden md:inline">•</span>
+              <span className="font-medium text-zinc-700 truncate hidden md:inline">
+                Focus: <strong className="text-zinc-900">{activeTopic}</strong>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-[11px] text-zinc-500 font-medium hidden sm:inline">
+                {activePath.progress}% Verified
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate(`/conversations/${activePath.id}/roadmap`)}
+                className="text-[#2b7fff] hover:underline font-semibold cursor-pointer border-0 bg-transparent flex items-center gap-1 text-xs"
+              >
+                <span>Roadmap</span>
+                <Route className="size-3" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Floating Sidebar Open Trigger if Sidebar is Hidden and No Banner */}
+        {!sidebarOpen && !activePath && (
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}

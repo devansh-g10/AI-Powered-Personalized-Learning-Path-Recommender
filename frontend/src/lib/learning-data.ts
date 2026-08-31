@@ -349,6 +349,18 @@ export async function fetchLiveDashboardData(): Promise<DashboardFullData> {
   const processedPaths: LearningPathItem[] = allRaw.map((raw) => {
     const pathId = raw.id;
 
+    // Retrieve learningContext
+    let contextData = raw.learningContext || null;
+    const storedContext = localStorage.getItem(`context_${pathId}`);
+    if (storedContext) {
+      try {
+        const parsedContext = JSON.parse(storedContext);
+        contextData = { ...(contextData || {}), ...parsedContext };
+      } catch {
+        // ignore
+      }
+    }
+
     // Retrieve roadmap structure
     let roadmapData: RoadmapStructure | null = null;
     const storedRoadmap = localStorage.getItem(`roadmap_${pathId}`);
@@ -466,7 +478,7 @@ export async function fetchLiveDashboardData(): Promise<DashboardFullData> {
       remainingHours: Math.max(0, remainingHours),
       createdAt: raw.createdAt || new Date().toISOString(),
       updatedAt: raw.updatedAt,
-      learningContext: raw.learningContext,
+      learningContext: contextData,
       roadmap: roadmapData,
     };
   });

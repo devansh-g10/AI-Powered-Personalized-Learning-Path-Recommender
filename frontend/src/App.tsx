@@ -52,6 +52,7 @@ export default function App() {
             <Route path="/skills" element={<SkillsPage />} />
             <Route path="/recommendations" element={<RecommendationsPage />} />
             <Route path="/assistant" element={<AssistantPage />} />
+            <Route path="/assistant/:id" element={<AssistantPage />} />
 
             {/* AI Profiler & Course Creator Views */}
             <Route path="/questionnaire" element={<QuestionnairePage />} />

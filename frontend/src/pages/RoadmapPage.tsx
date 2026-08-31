@@ -731,7 +731,10 @@ export default function RoadmapPage() {
               <div className="pt-2 flex flex-col gap-2">
                 <Button
                   onClick={() => {
-                    navigate(`/assistant?topic=${encodeURIComponent(currentSelectedPhase.title)}`);
+                    const firstUncompletedTopic = currentSelectedPhase?.topics?.find((t) => !completedTopicIds.has(t.topicId))?.title;
+                    const targetTopic = firstUncompletedTopic || currentSelectedPhase?.topics?.[0]?.title || currentSelectedPhase?.title || roadmap?.objective || "Learning Roadmap";
+                    const targetId = activeTargetId || routeConvId || "default";
+                    navigate(`/conversations/${targetId}/assistant?topic=${encodeURIComponent(targetTopic)}`);
                   }}
                   className="group bg-[#2b7fff] text-white hover:bg-[#2563eb] gap-2 w-full rounded-xl cursor-pointer h-10 text-xs font-bold transition-all border-0"
                 >
