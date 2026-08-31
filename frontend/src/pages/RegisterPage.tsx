@@ -86,9 +86,6 @@ export default function RegisterPage() {
             <h1 className="font-bold text-2xl tracking-tight mb-1">
               Create your account
             </h1>
-            <p className="text-sm text-[#71717b]">
-              Start your personalized learning journey with AI
-            </p>
           </div>
 
           {emailConfirmationRequired ? (

@@ -69,9 +69,6 @@ export default function LoginPage() {
             <h1 className="font-bold text-2xl tracking-tight mb-1">
               Welcome back
             </h1>
-            <p className="text-sm text-[#71717b]">
-              Sign in to continue your personalized learning path
-            </p>
           </div>
 
           {error && (
