@@ -168,28 +168,42 @@ export const sendMessageHandler = async (req, res) => {
       return res.status(400).json({ message: "Message content is required" });
     }
 
-    // ── Step 1: Verify ownership ─────────────────────────────────────────────
-    const conversation = await getConversationById(conversationId, userId);
+    // ── Step 1: Verify ownership / resolve conversation ─────────────────────
+    let conversation;
+    let actualConvId = conversationId;
+    if (!conversationId || conversationId === "new" || conversationId.startsWith("session-")) {
+      conversation = await createConversation(userId, "Mentorship Session");
+      actualConvId = conversation.id;
+    } else {
+      try {
+        conversation = await getConversationById(conversationId, userId);
+      } catch {
+        conversation = await createConversation(userId, "Mentorship Session");
+        actualConvId = conversation.id;
+      }
+    }
 
     // ── Step 2: Load message history (Redis → DB) ────────────────────────────
-    let previousMessages = await getCachedMessages(conversationId);
+    let previousMessages = await getCachedMessages(actualConvId);
     if (!previousMessages) {
-      previousMessages = await getMessages(conversationId, userId);
-      await setCachedMessages(conversationId, previousMessages);
+      previousMessages = await getMessages(actualConvId, userId).catch(() => []);
+      if (previousMessages?.length) {
+        await setCachedMessages(actualConvId, previousMessages);
+      }
     }
 
     // ── Step 3: Load learning context (Redis → DB) ───────────────────────────
-    let learningContext = await getCachedLearningContext(conversationId);
+    let learningContext = await getCachedLearningContext(actualConvId);
     if (!learningContext) {
-      learningContext = await getLearningContext(conversationId, userId);
-      if (learningContext) await setCachedLearningContext(conversationId, learningContext);
+      learningContext = await getLearningContext(actualConvId, userId).catch(() => null);
+      if (learningContext) await setCachedLearningContext(actualConvId, learningContext);
     }
 
     // ── Step 4: Load roadmap (Redis → DB rawJson) ────────────────────────────
-    let roadmapJson = await getCachedRoadmap(conversationId);
+    let roadmapJson = await getCachedRoadmap(actualConvId);
     if (!roadmapJson && conversation.roadmap) {
       roadmapJson = conversation.roadmap.rawJson;
-      await setCachedRoadmap(conversationId, roadmapJson);
+      await setCachedRoadmap(actualConvId, roadmapJson);
     }
 
     // ── Step 5: Call AI and start stream ─────────────────────────────────────
@@ -217,7 +231,7 @@ export const sendMessageHandler = async (req, res) => {
       res.setHeader("Connection", "keep-alive");
 
       // Send initial metadata
-      res.write(`data: ${JSON.stringify({ type: "metadata", messageId: aiMessageId, conversationId })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: "metadata", messageId: aiMessageId, conversationId: actualConvId })}\n\n`);
 
       // ── Step 8: Stream response chunks ────────────────────────────────────────
       let fullResponse = "";
@@ -235,7 +249,7 @@ export const sendMessageHandler = async (req, res) => {
 
       // ── Step 9: Enqueue persistence (async, after response sent) ──────────────
       await enqueuePersistenceJob({
-        conversationId,
+        conversationId: actualConvId,
         userId,
         humanMessage: {
           id: humanMessageId,
@@ -261,7 +275,7 @@ export const sendMessageHandler = async (req, res) => {
 
       // Enqueue persistence (async)
       await enqueuePersistenceJob({
-        conversationId,
+        conversationId: actualConvId,
         userId,
         humanMessage: {
           id: humanMessageId,
@@ -279,7 +293,7 @@ export const sendMessageHandler = async (req, res) => {
       return res.status(200).json({
         messageId: aiMessageId,
         message: fullResponse,
-        conversationId,
+        conversationId: actualConvId,
         createdAt: now,
       });
     }
