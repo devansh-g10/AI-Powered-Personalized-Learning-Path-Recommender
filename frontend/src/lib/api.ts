@@ -5,7 +5,7 @@ const getApiBaseUrl = (): string => {
     import.meta.env.VITE_API_URL ||
     import.meta.env.VITE_BACKEND_URL ||
     import.meta.env.VITE_SERVER_URL ||
-    "http://localhost:4000/api";
+    "https://ai-powered-personalized-learning-path-iytr.onrender.com/api";
 
   const trimmed = envUrl.trim().replace(/\/+$/, "");
   return trimmed.endsWith("/api") ? trimmed : `${trimmed}/api`;
