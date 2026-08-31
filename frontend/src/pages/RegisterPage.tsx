@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Route, Eye, EyeOff, Loader2, Sparkles, ArrowRight } from "lucide-react";
+import { Route, Eye, EyeOff, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 
@@ -14,7 +14,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [emailConfirmationRequired, setEmailConfirmationRequired] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, loginDemoUser, loginWithGoogle } = useAuth();
+  const { register, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,17 +47,12 @@ export default function RegisterPage() {
       const msg =
         axiosErr.response?.data?.message ||
         (axiosErr.message === "Network Error"
-          ? "Cannot connect to server. Please check your backend connection or try the 1-Click Demo Login."
+          ? "Cannot connect to server. Please try again later."
           : axiosErr.message || "Registration failed. Please try again.");
       setError(msg);
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleDemoLogin = () => {
-    loginDemoUser();
-    navigate("/");
   };
 
   const handleGoogleLogin = async () => {
@@ -118,23 +113,6 @@ export default function RegisterPage() {
             </div>
           ) : (
             <>
-              {/* Quick Demo Login Action */}
-              <Button
-                type="button"
-                onClick={handleDemoLogin}
-                className="w-full h-10 mb-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg gap-2 text-xs shadow-md shadow-emerald-600/20"
-              >
-                <Sparkles className="size-3.5" />
-                1-Click Demo Login (Instant Access)
-                <ArrowRight className="size-3.5 ml-auto" />
-              </Button>
-
-              <div className="flex items-center gap-3 my-4">
-                <div className="flex-1 h-px bg-zinc-200" />
-                <span className="text-[11px] text-[#71717b] uppercase font-semibold">or create with email</span>
-                <div className="flex-1 h-px bg-zinc-200" />
-              </div>
-
               {error && (
                 <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs leading-relaxed">
                   {error}
