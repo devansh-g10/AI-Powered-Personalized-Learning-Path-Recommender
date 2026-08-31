@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Route, Eye, EyeOff, Loader2, Sparkles, ArrowRight } from "lucide-react";
+import { Route, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 
@@ -10,7 +10,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, loginDemoUser, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: Location })?.from?.pathname || "/";
@@ -30,17 +30,12 @@ export default function LoginPage() {
       const msg =
         axiosErr.response?.data?.message ||
         (axiosErr.message === "Network Error"
-          ? "Cannot connect to server. You can click 'Try 1-Click Demo Account' below to explore instantly."
+          ? "Cannot connect to server. Please try again later."
           : axiosErr.message || "Login failed. Please try again.");
       setError(msg);
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleDemoLogin = () => {
-    loginDemoUser();
-    navigate(from, { replace: true });
   };
 
   const handleGoogleLogin = async () => {
@@ -77,23 +72,6 @@ export default function LoginPage() {
             <p className="text-sm text-[#71717b]">
               Sign in to continue your personalized learning path
             </p>
-          </div>
-
-          {/* Quick Demo Login Action */}
-          <Button
-            type="button"
-            onClick={handleDemoLogin}
-            className="w-full h-10 mb-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg gap-2 text-xs shadow-md shadow-emerald-600/20"
-          >
-            <Sparkles className="size-3.5" />
-            1-Click Demo Login (Instant Access)
-            <ArrowRight className="size-3.5 ml-auto" />
-          </Button>
-
-          <div className="flex items-center gap-3 my-4">
-            <div className="flex-1 h-px bg-zinc-200" />
-            <span className="text-[11px] text-[#71717b] uppercase font-semibold">or email sign-in</span>
-            <div className="flex-1 h-px bg-zinc-200" />
           </div>
 
           {error && (
