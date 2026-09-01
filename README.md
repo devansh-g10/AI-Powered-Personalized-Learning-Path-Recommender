@@ -1,5 +1,12 @@
 # 🧠 AI-Powered Personalized Learning Path Recommender
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](CONTRIBUTING.md)
+[![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC)](https://tailwindcss.com/)
+
 > An intelligent, context-aware adaptive learning platform that analyzes learner skills, goals, constraints, and learning history to identify skill gaps, generate structured interactive roadmaps, and provide real-time Socratic AI tutoring.
 
 ---
@@ -384,8 +391,23 @@ npm run dev
 
 ---
 
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/devansh-g10/AI-Powered-Personalized-Learning-Path-Recommender/issues).
+
+Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting a Pull Request.
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
+
 ## 👥 Authors & Acknowledgments
 
-- **Developer:** Devansh & Team
+- **Developer:** Devansh Maheshwari & Contributors
 - **Organization:** HCLTech
 - **Project Repository:** [AI-Powered-Personalized-Learning-Path-Recommender](https://github.com/devansh-g10/AI-Powered-Personalized-Learning-Path-Recommender)
+
